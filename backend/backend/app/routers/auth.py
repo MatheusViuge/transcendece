@@ -1,0 +1,102 @@
+from fastapi import APIRouter, Depends, status, HTTPException, status
+from sqlalchemy.orm import Session
+from app.database import get_db
+from app.services.auth_service import create_salt, verify_password, get_password_hash
+from app.core.security import allowed_roles
+
+from app.models.user import Usuario
+from app.schemas.user import UsuarioCriar, UsuarioResponse, TokenResponse, UsuarioLogin
+from app.schemas.user import UsuarioLogin
+from typing import List
+from app.core.security import create_access_token
+from app.core.response import success_response
+
+router = APIRouter(
+	prefix="/auth",
+	tags=["Auth"]
+)
+
+@router.post("/register", response_model=UsuarioResponse, status_code=status.HTTP_201_CREATED)
+def registra_usuario(
+	usuario: UsuarioCriar, db: Session = Depends(get_db)
+):
+
+	"""Função que registra o usuario no banco"""
+
+	ja_existe = db.query(Usuario).filter(
+		Usuario.email == usuario.email
+	).first()
+
+	if ja_existe:
+		raise HTTPException(
+			status_code=status.HTTP_400_BAD_REQUEST,
+			detail="Usuario ja cadastrado!"
+		)
+	db_usuario = Usuario(
+		nome = usuario.nome,
+		sobrenome = usuario.sobrenome,
+		email = usuario.email,
+		senha_hash = get_password_hash(create_salt(usuario.senha_hash, usuario.email)),
+		tipo_usuario = usuario.tipo_usuario,
+		data_nascimento = usuario.data_nascimento
+	)
+
+	db.add(db_usuario)
+	db.commit()
+	db.refresh(db_usuario)
+
+	return success_response(
+		data=UsuarioResponse.model_validate(db_usuario),
+		message="Usuário registrado com sucesso.",
+		status_code=status.HTTP_201_CREATED
+	)
+
+@router.get("/usuarios", response_model=List[UsuarioResponse])
+def listar_usuarios(db: Session = Depends(get_db) , require = Depends(allowed_roles("admin"))):
+	"""Função que retorna todos os usuarios cadastrados"""
+	query = db.query(Usuario)
+	print(query)
+
+	return success_response(
+		data=[UsuarioResponse.model_validate(u) for u in query],
+		message="Usuários listados com sucesso."
+	)
+
+# Rota de login
+
+@router.post("/login", response_model=TokenResponse)
+def login(data: UsuarioLogin, db: Session = Depends(get_db)):
+	"""
+	Login do usuario, recebe email e senha adiciona o salt e verifica se existe e é real.
+	"""
+	user = db.query(Usuario).filter(Usuario.email == data.email).first()
+	if not user:
+		raise HTTPException(
+			status_code=status.HTTP_401_UNAUTHORIZED,
+			detail="Credenciais inválidas"
+			)
+
+	senha_com_salt = create_salt(data.senha, user.email)
+	if not verify_password(senha_com_salt, user.senha_hash):
+		raise HTTPException(
+			status_code=status.HTTP_401_UNAUTHORIZED,
+			detail="Credenciais inválidas"
+			)
+
+	token = create_access_token(user_id=user.id, email=user.email, role=user.tipo_usuario)
+	return success_response(
+		data={"access_token": token},
+		message="Login realizado com sucesso",
+		status_code=status.HTTP_200_OK
+	)
+
+# Rota para obter informações do usuário autenticado
+@router.get("/me", response_model=UsuarioResponse)
+def get_me(db:Session = Depends(get_db), usuario = Depends(allowed_roles())):
+	"""Rota para obter informações do usuário autenticado"""
+	user = db.query(Usuario).filter(Usuario.id == usuario["id"]).first()
+	return success_response(
+		data=UsuarioResponse.model_validate(user),
+		message="Dados do usuário retornados com sucesso.",
+		status_code=status.HTTP_200_OK
+	)

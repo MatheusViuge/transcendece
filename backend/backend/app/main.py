@@ -1,0 +1,94 @@
+from fastapi import FastAPI
+from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from app.core.exceptions import AppException
+from app.core.error_handlers import (
+    app_exception_handler,
+    validation_exception_handler,
+    http_exception_handler,
+    unhandled_exception_handler
+)
+from app.core import middleware
+from app.core.cors import setup_cors
+from app.routers import auth, category, level, course, instructor
+from app.routers import evaluation
+import os
+
+# importando a função de teste de conexão com Supabse
+from .database import test_connection, Base, engine
+
+Base.metadata.create_all(bind=engine)
+
+# Instância básica da API
+app = FastAPI(
+    title="API de Teste - EduTech",
+    description="API simulada apenas para testar Docker + Supabase",
+    version="1.0.0"
+)
+
+middleware.register_jwt_middleware(app)
+
+origins = [
+    "http://localhost:5173",  # Localhost (Vite)
+    "http://localhost:3000",  # Localhost (Alternativo)
+    "https://plataforma-instituto-consuelo.vercel.app" # Produção (Sem a barra no final)
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins, # <-- USANDO AS ORIGENS ESPECÍFICAS (Adeus erro 401!)
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.include_router(auth.router)
+app.include_router(category.router)
+app.include_router(level.router)
+app.include_router(course.router)
+app.include_router(instructor.router)
+app.include_router(evaluation.router)
+
+# Handlers de errors de requisições
+app.add_exception_handler(AppException, app_exception_handler)
+app.add_exception_handler(RequestValidationError, validation_exception_handler)
+app.add_exception_handler(HTTPException, http_exception_handler)
+app.add_exception_handler(Exception, unhandled_exception_handler)
+
+# Importar e registrar router de enrollments
+from app.routers import enrollments
+app.include_router(enrollments.router)
+
+# Rota raiz
+@app.get("/")
+def root():
+    return {"message": "API rodando com sucesso dentro do Docker"}
+
+# Outra rota simples
+@app.get("/status")
+def status():
+    return {"status": "ok", "docker": True, "backend": "online"}
+
+# Rota para testar variáveis de ambiente de DB
+import os
+@app.get("/env")
+def read_env():
+    return {
+        "DATABASE_URL": os.getenv("DATABASE_URL"),
+    }
+
+# Rota para testar a conexão com o Supabse
+@app.get("/db-check")
+def db_check():
+    try:
+        test_connection()
+        return {
+            "db": "ok",
+            "detail": "Conexão com Supabase funcionando!"
+        }
+    except Exception as e:
+        return {
+            "db": "error",
+            "detail": str(e)
+        }
