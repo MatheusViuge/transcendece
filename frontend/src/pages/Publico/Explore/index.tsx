@@ -3,7 +3,7 @@ import CoursesGrid from "./components/CoursesGrid";
 import EmptyState from "./components/EmptyState";
 import { BaseInput } from "@/components/Form";
 import { api, catchCustom } from "@/services/api";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useSearchParams } from "react-router-dom";
@@ -22,17 +22,20 @@ export default function Explore() {
     defaultValues: { busca: searchParams.get("busca") ?? "" },
   });
 
-  const buscarCursos = async () => {
-    try {
-      const response = await api.get({ url: "/courses/", hiddenToast: true });
-      setCursos(response.data);
-    } catch (error) {
-      catchCustom(error);
-    }
-  };
-
   useEffect(() => {
-    void buscarCursos();
+    let active = true;
+
+    api.get({ url: "/courses/", hiddenToast: true })
+      .then((response) => {
+        if (active) setCursos(response.data);
+      })
+      .catch((error) => {
+        if (active) catchCustom(error);
+      });
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   const onSearch = ({ busca }: SearchFormData) => {
