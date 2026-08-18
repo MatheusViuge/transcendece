@@ -84,9 +84,100 @@ jobs:
           JWT_SECRET_KEY=ci-only-jwt-secret-that-is-long-enough-for-tests-42
           EOF
 
-      - name: Run clean-install smoke
+      - name: Validate Compose configuration
+        run: docker compose config --quiet
+
+      - name: Build all images
+        run: docker compose build
+
+      - name: Start PostgreSQL
+        run: docker compose up -d db
+
+      - name: Wait for PostgreSQL health
         shell: bash
-        run: sh scripts/clean-install-smoke.sh
+        run: |
+          for attempt in $(seq 1 30); do
+            status=$(docker inspect --format='{{.State.Health.Status}}' "$(docker compose ps -q db)" 2>/dev/null || true)
+            if [ "$status" = "healthy" ]; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker compose ps
+          docker compose logs --tail=100 db
+          exit 1
+
+      - name: Start backend and run migrations
+        run: docker compose up -d backend
+
+      - name: Wait for backend health
+        shell: bash
+        run: |
+          for attempt in $(seq 1 45); do
+            container=$(docker compose ps -q backend)
+            if [ -n "$container" ]; then
+              status=$(docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$container" 2>/dev/null || true)
+              if [ "$status" = "healthy" ]; then
+                exit 0
+              fi
+              if [ "$(docker inspect --format='{{.State.Status}}' "$container" 2>/dev/null || true)" = "exited" ]; then
+                break
+              fi
+            fi
+            sleep 2
+          done
+          docker compose ps
+          docker compose logs --tail=150 backend
+          exit 1
+
+      - name: Verify Alembic state
+        shell: bash
+        run: |
+          docker compose exec -T backend alembic heads | tee /tmp/alembic-heads.txt
+          test "$(grep -c '(head)' /tmp/alembic-heads.txt)" -eq 1
+          docker compose exec -T backend alembic current | tee /tmp/alembic-current.txt
+          grep -q '(head)' /tmp/alembic-current.txt
+
+      - name: Start frontend and HTTPS proxy
+        run: docker compose up -d frontend proxy
+
+      - name: Wait for HTTPS health endpoint
+        shell: bash
+        run: |
+          for attempt in $(seq 1 45); do
+            if curl --silent --show-error --fail --insecure https://localhost/api/status | grep -Eq '"status"[[:space:]]*:[[:space:]]*"ok"'; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker compose ps
+          docker compose logs --tail=150 frontend proxy backend
+          exit 1
+
+      - name: Verify HTTP redirects to HTTPS
+        shell: bash
+        run: |
+          headers=$(curl --silent --show-error --head http://localhost)
+          printf '%s\n' "$headers"
+          printf '%s\n' "$headers" | grep -Eq '^HTTP/[0-9.]+ 30[1278]'
+          printf '%s\n' "$headers" | grep -Eiq '^location: https://localhost/?'
+
+      - name: Verify frontend routes through HTTPS
+        shell: bash
+        run: |
+          curl --silent --show-error --fail --insecure https://localhost/ >/dev/null
+          curl --silent --show-error --fail --insecure https://localhost/login >/dev/null
+          curl --silent --show-error --fail --insecure https://localhost/privacidade >/dev/null
+          curl --silent --show-error --fail --insecure https://localhost/termos >/dev/null
+
+      - name: Verify internal ports are not public
+        shell: bash
+        run: |
+          ! curl --silent --connect-timeout 2 http://localhost:8000/status >/dev/null 2>&1
+          ! curl --silent --connect-timeout 2 http://localhost:8080/ >/dev/null 2>&1
+
+      - name: Show final service state
+        run: docker compose ps
 
       - name: Show service logs on failure
         if: failure()
