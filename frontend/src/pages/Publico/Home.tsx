@@ -5,15 +5,11 @@ import { BaseInput } from "@/components/Form";
 import { Button } from "@/components/Button";
 import { Link, useNavigate } from "react-router-dom";
 import Hero from "@/components/Hero";
-import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { api, catchCustom } from "@/services/api";
-import type { ICursos } from "@/interfaces/cursos";
 import { searchSchema, type SearchFormData } from "@/pages/Publico/schemas/searchSchema";
 
 export default function Home() {
-  const [cursos, setCursos] = useState<ICursos[]>([]);
   const navigate = useNavigate();
   const {
     register,
@@ -23,21 +19,6 @@ export default function Home() {
     resolver: zodResolver(searchSchema),
     defaultValues: { busca: "" },
   });
-
-  const buscarCursos = async () => {
-    try {
-      const response = await api.get({ url: "/courses/", hiddenToast: true });
-
-      setCursos(response.data);
-    } catch (error) {
-      catchCustom(error);
-    }
-  };
-
-  useEffect(() => {
-    buscarCursos();
-  }, []);
-  console.log(cursos);
 
   const onSearch = ({ busca }: SearchFormData) => {
     const params = new URLSearchParams();
@@ -75,7 +56,7 @@ export default function Home() {
         <div className="responsive gap-6 animate-fade-in">
           {cursosPopulares.map((curso) => (
             <Link to={`/cursos/${curso.id}`} key={curso.id}>
-              <Card key={curso.id} className="transition-all duration-300 hover:-translate-y-1">
+              <Card className="transition-all duration-300 hover:-translate-y-1">
                 <Card.Image src={curso.url_image||""} alt={curso.titulo} />
                 <Card.Body>
                   <Card.Title>{curso.titulo}</Card.Title>
@@ -89,7 +70,7 @@ export default function Home() {
         </div>
       </section>
 
-        <CategoriesGrid />
+      <CategoriesGrid />
     </div>
-  )
+  );
 }
