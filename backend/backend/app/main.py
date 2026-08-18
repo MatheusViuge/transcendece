@@ -11,7 +11,6 @@ from app.core.error_handlers import (
     validation_exception_handler,
 )
 from app.core.exceptions import AppException
-from app.database import Base, engine
 from app.routers import (
     auth,
     category,
@@ -21,8 +20,6 @@ from app.routers import (
     instructor,
     level,
 )
-
-Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title="Instituto Consuelo API",
