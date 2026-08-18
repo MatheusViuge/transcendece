@@ -9,16 +9,16 @@ export default function Dashboard() {
 
   return (
     <div>
-      <section className="py-12 px-4 md:px-8 mx-auto max-w-[1300px]">
+      <section className="mx-auto w-full max-w-[1300px] px-4 py-8 md:px-8 md:py-12">
         <h1 className="text-2xl font-normal text-neutral-900">
           Oi, {user?.nome}!
         </h1>
-        <p className="text-neutral-600 mt-2 mb-8">Continue com sua jornada de aprendizado!</p>
+        <p className="mt-2 mb-8 text-neutral-600">Continue com sua jornada de aprendizado!</p>
 
-        <div className="grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] gap-6 animate-fade-in">
+        <div className="grid min-w-0 grid-cols-1 gap-6 animate-fade-in sm:grid-cols-2 xl:grid-cols-3">
           {cursosMatriculados.map((curso) => (
-            <Link key={curso.id} to={`/aluno/cursos/${curso.id}`}>
-              <Card className="transition-all duration-300 hover:-translate-y-1">
+            <Link key={curso.id} to={`/aluno/cursos/${curso.id}`} className="min-w-0">
+              <Card className="h-full min-w-0 transition-all duration-300 hover:-translate-y-1">
                 <Card.Image src={curso.url_image} alt={curso.titulo} />
                 <Card.Body>
                   <Card.Title>{curso.titulo}</Card.Title>
