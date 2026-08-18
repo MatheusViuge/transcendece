@@ -74,7 +74,9 @@ printf '%s\n' "$CURRENT" | grep -q '(head)' || fail "database is not at Alembic 
 
 info "Checking container health"
 docker compose ps
-if docker compose ps --status unhealthy | grep -q .; then
+UNHEALTHY=$(docker compose ps --status unhealthy --quiet)
+if [ -n "$UNHEALTHY" ]; then
+  printf '%s\n' "$UNHEALTHY" >&2
   fail "one or more containers are unhealthy"
 fi
 
