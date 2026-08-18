@@ -23,8 +23,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    ports:
-      - "8000:8000"
+    expose:
+      - "8000"
     healthcheck:
       test:
         - CMD
@@ -43,9 +43,25 @@ services:
     depends_on:
       backend:
         condition: service_healthy
+    expose:
+      - "80"
+    restart: unless-stopped
+
+  proxy:
+    build:
+      context: ./infra/nginx
+    depends_on:
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
     ports:
-      - "8080:80"
+      - "80:80"
+      - "443:443"
+    volumes:
+      - tls_certs:/etc/nginx/certs
     restart: unless-stopped
 
 volumes:
   postgres_data:
+  tls_certs:
