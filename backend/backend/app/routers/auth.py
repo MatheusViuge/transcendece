@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -73,7 +74,11 @@ def login(data: UsuarioLogin, db: Session = Depends(get_db)):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Credenciais inválidas.",
+            headers={"WWW-Authenticate": "Bearer"},
         )
+
+    user.ultimo_login = datetime.now(timezone.utc)
+    db.commit()
 
     token = create_access_token(
         user_id=user.id,
@@ -100,6 +105,7 @@ def get_me(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Usuário autenticado não encontrado.",
+            headers={"WWW-Authenticate": "Bearer"},
         )
 
     return success_response(
