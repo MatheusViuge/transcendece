@@ -2,8 +2,7 @@ import { useUser } from "@/hooks/useUser";
 import { Navigate, useLocation } from "react-router-dom";
 import { Layout } from "./Layout";
 import { Loader } from "./Loader";
-
-const protectedBasePaths = ["/instrutor", "/aluno", "/admin"] as const;
+import { protectedBasePaths } from "./protectedRoutes";
 
 export function PrivateRoute() {
     const { user, loading, isAuthenticated } = useUser();
