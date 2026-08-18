@@ -23,9 +23,20 @@ export function TermsModal({ isOpen, onClose, onAccept }: Props) {
         </h3>
 
         <div className="grid max-h-64 gap-y-4 overflow-y-auto rounded-md border border-overlay p-4 pr-2 text-sm text text-justify">
-          <div>
+          <div className="space-y-2">
             <p className="font-semibold">1. Termos de Uso</p>
-            <p>Lorem ipsum dolor sit amet...</p>
+            <p>
+              Ao criar uma conta, você concorda em utilizar a plataforma de forma compatível com
+              sua finalidade educacional, proteger suas credenciais e respeitar as regras de acesso
+              e de uso descritas no documento completo.
+            </p>
+            <Link
+              className="inline-block font-medium underline underline-offset-4"
+              to="/termos"
+              onClick={onClose}
+            >
+              Ler os Termos de Serviço completos
+            </Link>
           </div>
 
           <div className="space-y-2">
