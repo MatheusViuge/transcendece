@@ -1,8 +1,13 @@
-export type TObj = { [key: string]: any };
+import type { ReactNode } from "react";
 
-export type TCustomRender = { [key: string]: (row: TObj, columnKey: string) => React.ReactNode };
+export type TObj = Record<string, ReactNode>;
 
-export type TColumns = { [key: string]: string };
+export type TCustomRender = Record<
+    string,
+    (row: TObj, columnKey: string) => ReactNode
+>;
+
+export type TColumns = Record<string, string>;
 
 export interface ITableProps {
     data: Array<TObj>;
