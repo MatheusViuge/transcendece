@@ -18,7 +18,7 @@ router = APIRouter(
 
 @router.post("/register", response_model=UsuarioResponse, status_code=status.HTTP_201_CREATED)
 def registra_usuario(usuario: UsuarioCriar, db: Session = Depends(get_db)):
-    """Registra um usuário persistindo somente o hash da senha."""
+    """Registra um usuário público sempre com a role segura padrão `aluno`."""
     email = str(usuario.email).strip().lower()
     ja_existe = db.query(Usuario).filter(Usuario.email == email).first()
 
@@ -29,11 +29,11 @@ def registra_usuario(usuario: UsuarioCriar, db: Session = Depends(get_db)):
         )
 
     db_usuario = Usuario(
-        nome=usuario.nome.strip(),
-        sobrenome=usuario.sobrenome.strip(),
+        nome=usuario.nome,
+        sobrenome=usuario.sobrenome,
         email=email,
         senha_hash=get_password_hash(usuario.senha_hash),
-        tipo_usuario=usuario.tipo_usuario,
+        tipo_usuario="aluno",
         data_nascimento=usuario.data_nascimento,
     )
 
@@ -66,7 +66,7 @@ def listar_usuarios(
 @router.post("/login", response_model=TokenResponse)
 def login(data: UsuarioLogin, db: Session = Depends(get_db)):
     """Autentica por email/senha e emite JWT somente após verificação do hash."""
-    email = str(data.email).strip().lower()
+    email = str(data.email).lower()
     user = db.query(Usuario).filter(Usuario.email == email).first()
 
     if not user or not verify_password(data.senha, user.senha_hash):
