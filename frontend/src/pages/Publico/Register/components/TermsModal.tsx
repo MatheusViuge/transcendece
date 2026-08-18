@@ -1,4 +1,5 @@
 import { Button } from "@/components/Button";
+import { Link } from "react-router-dom";
 
 type Props = {
   isOpen: boolean;
@@ -10,19 +11,37 @@ export function TermsModal({ isOpen, onClose, onAccept }: Props) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-fade-in">
-      <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full p-6 space-y-4 relative">
-        <h3 className="text-xl font-medium black-text">Termos e Política</h3>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-fade-in">
+      <div
+        className="relative w-full max-w-lg space-y-4 rounded-2xl bg-white p-6 shadow-xl"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="terms-modal-title"
+      >
+        <h3 id="terms-modal-title" className="text-xl font-medium black-text">
+          Termos e Política
+        </h3>
 
-        <div className="h-64 overflow-y-auto text-sm text grid gap-y-4 pr-2 border border-overlay rounded-md p-4 text-justify">
+        <div className="grid max-h-64 gap-y-4 overflow-y-auto rounded-md border border-overlay p-4 pr-2 text-sm text text-justify">
           <div>
             <p className="font-semibold">1. Termos de Uso</p>
             <p>Lorem ipsum dolor sit amet...</p>
           </div>
 
-          <div>
+          <div className="space-y-2">
             <p className="font-semibold">2. Política de Privacidade</p>
-            <p>Consectetur adipiscing elit...</p>
+            <p>
+              Tratamos dados de conta e de uso apenas para autenticação, funcionamento da
+              plataforma e proteção do serviço. Senhas e segredos de infraestrutura não devem ser
+              apresentados em texto simples ao usuário.
+            </p>
+            <Link
+              className="inline-block font-medium underline underline-offset-4"
+              to="/privacidade"
+              onClick={onClose}
+            >
+              Ler a Política de Privacidade completa
+            </Link>
           </div>
         </div>
 
