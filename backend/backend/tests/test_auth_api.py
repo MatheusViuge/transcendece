@@ -51,8 +51,10 @@ def test_invalid_login_uses_generic_error(client):
 
     assert wrong_password.status_code == 401
     assert missing_user.status_code == 401
-    assert wrong_password.json()["detail"] == "Credenciais inválidas."
-    assert missing_user.json()["detail"] == "Credenciais inválidas."
+    assert wrong_password.json()["message"] == "Credenciais inválidas."
+    assert missing_user.json()["message"] == "Credenciais inválidas."
+    assert wrong_password.json()["data"] is None
+    assert missing_user.json()["data"] is None
 
 
 def test_protected_route_rejects_missing_and_invalid_token(client):
