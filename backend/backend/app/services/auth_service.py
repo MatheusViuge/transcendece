@@ -1,15 +1,14 @@
 from passlib.hash import pbkdf2_sha256
 
-def get_password_hash(password: str) -> str:
-	"""
-	Função que recebe uma string(senha) e retorna o hash da string
-	"""
-	return pbkdf2_sha256.hash(password)
 
-def create_salt(senha: str , email:str) -> str:
-	"""Função que retorna o salt da senha"""
-	nova_senha = senha + email[:10]
-	return nova_senha
+def get_password_hash(password: str) -> str:
+    """Gera um hash PBKDF2-SHA256 com salt aleatório gerenciado pelo Passlib."""
+    return pbkdf2_sha256.hash(password)
+
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-	return pbkdf2_sha256.verify(plain_password, hashed_password)
+    """Verifica uma senha em texto contra um hash persistido."""
+    try:
+        return pbkdf2_sha256.verify(plain_password, hashed_password)
+    except (TypeError, ValueError):
+        return False
