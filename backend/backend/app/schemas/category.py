@@ -1,30 +1,26 @@
-from pydantic import BaseModel, Field
 from typing import Annotated, Optional
 
-nameType = Annotated[str,Field(min_length=1,max_length=100, description="nome da categoria")]
-descriptionType = Annotated[str, Field(min_length=1, max_length=500, description="descrição da categoria")]
+from pydantic import BaseModel, ConfigDict, Field
+
+from app.schemas.base import StrictInputModel
+
+NameType = Annotated[str, Field(min_length=1, max_length=100, description="Nome da categoria")]
+DescriptionType = Annotated[str, Field(min_length=1, max_length=500, description="Descrição da categoria")]
 
 
-class CategoriaBase(BaseModel):
-	"""Schema base da categoria"""
-	nome: nameType
-	descricao: descriptionType
-
-class CategoriaCreate(CategoriaBase):
-	"""Schema de criação da categoria"""
-	pass
-
-class CategoriaResponse(CategoriaBase):
-	"""Schema de resposta da categoria"""
-	id: int
-
-	class Config:
-		from_attributes = True
-
-class CategoriaUpdate(BaseModel):
-	"""Schema de update , metodo patch"""
-
-	nome: Optional[nameType] = None
-	descricao: Optional[descriptionType] = None
+class CategoriaCreate(StrictInputModel):
+    nome: NameType
+    descricao: DescriptionType
 
 
+class CategoriaResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    nome: NameType
+    descricao: DescriptionType
+
+
+class CategoriaUpdate(StrictInputModel):
+    nome: Optional[NameType] = None
+    descricao: Optional[DescriptionType] = None
