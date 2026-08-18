@@ -2,17 +2,19 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
-// Importando o schema e o tipo que define a estrutura do formulário
 import { registerSchema, type RegisterFormData } from "../schemas/registerSchema";
 import { api, catchCustom } from "@/services/api";
 
-// Re-exportando o tipo para que o componente visual (index.tsx) possa usar se precisar
 export type { RegisterFormData };
+
+type RegisterRequest = Pick<
+  RegisterFormData,
+  "nome" | "sobrenome" | "data_nascimento" | "email" | "senha_hash"
+>;
 
 export function useRegisterForm() {
   const [isSuccess, setIsSuccess] = useState(false);
 
-  // Configuração do React Hook Form usando o schema importado
   const form = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
@@ -20,20 +22,26 @@ export function useRegisterForm() {
     },
   });
 
-  // Função de envio do formulário
   const onSubmit = async (data: RegisterFormData) => {
+    const body: RegisterRequest = {
+      nome: data.nome,
+      sobrenome: data.sobrenome,
+      data_nascimento: data.data_nascimento,
+      email: data.email,
+      senha_hash: data.senha_hash,
+    };
+
     try {
-      await api.post({ url: "/auth/register", body: data });
+      await api.post<RegisterRequest>({ url: "/auth/register", body });
       setIsSuccess(true);
     } catch (error) {
       catchCustom(error);
     }
   };
 
-  // Retorna tudo que a tela precisa para funcionar
   return {
     form,
     isSuccess,
-    onSubmit: form.handleSubmit(onSubmit), 
+    onSubmit: form.handleSubmit(onSubmit),
   };
 }
