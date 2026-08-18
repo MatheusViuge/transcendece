@@ -11,9 +11,9 @@ export function TermsModal({ isOpen, onClose, onAccept }: Props) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-fade-in">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-3 py-6 animate-fade-in sm:items-center sm:p-4">
       <div
-        className="relative w-full max-w-lg space-y-4 rounded-2xl bg-white p-6 shadow-xl"
+        className="relative flex max-h-[calc(100dvh-3rem)] w-full max-w-lg flex-col gap-4 rounded-2xl bg-white p-4 shadow-xl xs:p-6"
         role="dialog"
         aria-modal="true"
         aria-labelledby="terms-modal-title"
@@ -22,7 +22,7 @@ export function TermsModal({ isOpen, onClose, onAccept }: Props) {
           Termos e Política
         </h3>
 
-        <div className="grid max-h-64 gap-y-4 overflow-y-auto rounded-md border border-overlay p-4 pr-2 text-sm text text-justify">
+        <div className="grid min-h-0 flex-1 gap-y-4 overflow-y-auto rounded-md border border-overlay p-4 pr-2 text-sm text text-justify">
           <div className="space-y-2">
             <p className="font-semibold">1. Termos de Uso</p>
             <p>
@@ -56,7 +56,7 @@ export function TermsModal({ isOpen, onClose, onAccept }: Props) {
           </div>
         </div>
 
-        <div className="flex justify-end gap-2">
+        <div className="flex flex-wrap justify-end gap-2">
           <Button variant="secondary" onClick={onClose} type="button">Fechar</Button>
           <Button onClick={onAccept} type="button">Li e Concordo</Button>
         </div>
