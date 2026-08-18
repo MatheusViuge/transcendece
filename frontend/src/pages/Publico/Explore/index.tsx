@@ -1,4 +1,3 @@
-import { CURSOS_LISTA } from "./mocks";
 import CoursesCount from "./components/CoursesCount";
 import CoursesGrid from "./components/CoursesGrid";
 import EmptyState from "./components/EmptyState";
@@ -12,7 +11,6 @@ import type { ICursos } from "@/interfaces/cursos";
 import { searchSchema, type SearchFormData } from "@/pages/Publico/schemas/searchSchema";
 
 export default function Explore() {
-  const hasCourses = CURSOS_LISTA.length > 0;
   const [searchParams, setSearchParams] = useSearchParams();
   const [cursos, setCursos] = useState<ICursos[]>([]);
   const {
@@ -27,7 +25,6 @@ export default function Explore() {
   const buscarCursos = async () => {
     try {
       const response = await api.get({ url: "/courses/", hiddenToast: true });
-
       setCursos(response.data);
     } catch (error) {
       catchCustom(error);
@@ -35,9 +32,8 @@ export default function Explore() {
   };
 
   useEffect(() => {
-    buscarCursos();
+    void buscarCursos();
   }, []);
-  console.log(cursos);
 
   const onSearch = ({ busca }: SearchFormData) => {
     const nextParams = new URLSearchParams(searchParams);
@@ -47,6 +43,15 @@ export default function Explore() {
 
     setSearchParams(nextParams);
   };
+
+  const query = (searchParams.get("busca") ?? "").trim().toLocaleLowerCase("pt-BR");
+  const visibleCourses = query
+    ? cursos.filter((course) =>
+        [course.titulo, course.instrutor]
+          .filter(Boolean)
+          .some((value) => value.toLocaleLowerCase("pt-BR").includes(query)),
+      )
+    : cursos;
 
   return (
     <div className="grid md:grid-cols-[25rem_1fr] gap-8 w-full mx-auto py-8 px-2 xs:px-16">
@@ -63,14 +68,13 @@ export default function Explore() {
         )}
       </form>
 
-      <section className="w-full">
-      </section>
+      <section className="w-full" />
 
       <div>
-        {hasCourses ? (
+        {visibleCourses.length > 0 ? (
           <>
-            <CoursesCount count={CURSOS_LISTA.length} />
-            <CoursesGrid courses={CURSOS_LISTA as ICursos[]} />
+            <CoursesCount count={visibleCourses.length} />
+            <CoursesGrid courses={visibleCourses} />
           </>
         ) : (
           <EmptyState />
