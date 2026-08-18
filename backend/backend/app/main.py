@@ -28,6 +28,7 @@ app = FastAPI(
     title="Instituto Consuelo API",
     description="Backend da plataforma educacional Instituto Consuelo.",
     version="1.0.0",
+    root_path="/api",
 )
 
 middleware.register_jwt_middleware(app)
@@ -35,6 +36,8 @@ middleware.register_jwt_middleware(app)
 origins = [
     "http://localhost:5173",
     "http://localhost:3000",
+    "https://localhost",
+    "https://127.0.0.1",
     "https://plataforma-instituto-consuelo.vercel.app",
 ]
 
