@@ -6,7 +6,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<IUserStorage | null>(null);
     const [loading, setLoading] = useState(true);
 
-    const authMe = async (token: string) => {
+    const authMe = async () => {
         setLoading(true);
 
         try {
@@ -30,7 +30,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
             return;
         }
 
-        void authMe(token).catch((error) => {
+        void authMe().catch((error) => {
             catchCustom(error);
         });
     }, []);
@@ -47,7 +47,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
             }
 
             localStorage.setItem("token", token);
-            await authMe(token);
+            await authMe();
         } catch (error) {
             localStorage.removeItem("token");
             setUser(null);
