@@ -3,86 +3,92 @@ import { toast } from "react-toastify";
 import { apiConfig } from "./apiConfig";
 import type { IRequest, IRequestBody } from "./types";
 
+type ApiErrorPayload = {
+    message?: string;
+    detail?: string;
+    data?: unknown;
+};
+
+function loadingToast(hiddenToast: boolean) {
+    return hiddenToast ? undefined : toast.loading("Carregando...");
+}
+
+function notifySuccess(hiddenToast: boolean, response: { data?: { message?: string }; statusText?: string }) {
+    if (!hiddenToast) {
+        toast.success(response.data?.message || response.statusText || "Operação concluída.");
+    }
+}
+
+function dismissLoading(id: ReturnType<typeof toast.loading> | undefined) {
+    if (id !== undefined) toast.dismiss(id);
+}
+
 export const api = {
-    get: async ({ url, config, hiddenToast=false } : IRequest) => {
-        const loading = !hiddenToast ? toast.loading("Carregando...") : null;
+    get: async ({ url, config, hiddenToast = false }: IRequest) => {
+        const loading = loadingToast(hiddenToast);
 
         try {
             const response = await apiConfig().get(url, config);
-
-            !hiddenToast && toast.success(response.data?.message || response.statusText);
+            notifySuccess(hiddenToast, response);
             return response.data;
-        } catch (err) {
-            throw err;
         } finally {
-            loading && toast.dismiss(loading);
+            dismissLoading(loading);
         }
     },
 
-    post: async <T>({ url, body, config, hiddenToast=false } : IRequestBody<T>) => {
-        const loading = !hiddenToast ? toast.loading("Carregando...") : null;
+    post: async <T>({ url, body, config, hiddenToast = false }: IRequestBody<T>) => {
+        const loading = loadingToast(hiddenToast);
 
         try {
             const response = await apiConfig().post(url, body, config);
-
-            !hiddenToast && toast.success(response.data?.message || response.statusText);
+            notifySuccess(hiddenToast, response);
             return response.data;
-        } catch (err) {
-            throw err;
         } finally {
-            loading && toast.dismiss(loading);
+            dismissLoading(loading);
         }
     },
 
-    put: async <T>({ url, body, config, hiddenToast=false } : IRequestBody<T>) => {
-        const loading = !hiddenToast ? toast.loading("Carregando...") : null;
+    put: async <T>({ url, body, config, hiddenToast = false }: IRequestBody<T>) => {
+        const loading = loadingToast(hiddenToast);
 
         try {
             const response = await apiConfig().put(url, body, config);
-
-            !hiddenToast && toast.success(response.data?.message || response.statusText);
+            notifySuccess(hiddenToast, response);
             return response.data;
-        } catch (err) {
-            throw err;
         } finally {
-            loading && toast.dismiss(loading);
+            dismissLoading(loading);
         }
     },
 
-    patch: async <T>({ url, body, config, hiddenToast=false } : IRequestBody<T>) => {
-        const loading = !hiddenToast ? toast.loading("Carregando...") : null;
+    patch: async <T>({ url, body, config, hiddenToast = false }: IRequestBody<T>) => {
+        const loading = loadingToast(hiddenToast);
 
         try {
             const response = await apiConfig().patch(url, body, config);
-
-            !hiddenToast && toast.success(response.data?.message || response.statusText);
+            notifySuccess(hiddenToast, response);
             return response.data;
-        } catch (err) {
-            throw err;
         } finally {
-            loading && toast.dismiss(loading);
+            dismissLoading(loading);
         }
     },
 
-    delete: async ({ url, config, hiddenToast=false } : IRequest) => {
-        const loading = !hiddenToast ? toast.loading("Carregando...") : null;
+    delete: async ({ url, config, hiddenToast = false }: IRequest) => {
+        const loading = loadingToast(hiddenToast);
 
         try {
             const response = await apiConfig().delete(url, config);
-
-            !hiddenToast && toast.success(response.data?.message || response.statusText);
+            notifySuccess(hiddenToast, response);
             return response.data;
-        } catch (err) {
-            throw err;
         } finally {
-            loading && toast.dismiss(loading);
+            dismissLoading(loading);
         }
     },
-}
+};
 
 export function catchCustom(err: unknown) {
-    const error = err as AxiosError<{ data: unknown, message: string }>;
-    
-    toast.error(error.response?.data?.message || error.message);
-    throw err;
+    const error = err as AxiosError<ApiErrorPayload>;
+    const payload = error.response?.data;
+    const message = payload?.message || (typeof payload?.detail === "string" ? payload.detail : undefined) || error.message;
+
+    toast.error(message || "Ocorreu um erro inesperado.");
 }
