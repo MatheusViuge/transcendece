@@ -1,6 +1,6 @@
-# Backend regression matrix
+# Backend mandatory regression
 
-The backend regression command is executed from `backend/backend`:
+Run from `backend/backend`:
 
 ```bash
 pytest
@@ -8,7 +8,7 @@ pytest
 
 The test environment supplies a disposable SQLite database and a test-only JWT secret before application modules are imported. It does not read or modify a developer's production database.
 
-## Mandatory coverage available now
+## Automated mandatory coverage
 
 | Area | Automated coverage |
 | --- | --- |
@@ -31,64 +31,24 @@ The unit/in-process suite does not replace deployment validation. The following 
 - [ ] persistence across container restart;
 - [ ] clean-clone smoke (`scripts/clean-install-smoke.sh`).
 
-## Optional-module regression gates
+## Optional modules are intentionally separate
 
-Issue #88 was intentionally written to eventually cover the complete 19-point product. Those tests must be added when the corresponding modules are implemented; they cannot be truthfully marked as passing while the features do not exist.
+Regression for optional features belongs to the QA issue of each module so the Mandatory Epic can close independently:
 
-### Public API
+- Framework/ORM — #37
+- Design System — #41
+- PWA — #45
+- Advanced Search — #49
+- Public API — #55
+- Advanced Permissions — #61
+- File Upload — #65
+- Standard User Management — #71
+- User Interaction — #75
+- WebSockets — #80
+- Analytics — #86
 
-When Epic #26 is implemented, add automated tests for:
-
-- [ ] API key valid/invalid/revoked;
-- [ ] rate limiting and 429 response;
-- [ ] public endpoint smoke coverage.
-
-### Advanced Permissions
-
-When Epic #27 is implemented, expand tests for:
-
-- [ ] user CRUD;
-- [ ] role management;
-- [ ] ownership and IDOR;
-- [ ] privilege escalation.
-
-### File Upload
-
-When Epic #28 is implemented, add:
-
-- [ ] valid upload;
-- [ ] invalid type/size/content;
-- [ ] ownership/download/delete;
-- [ ] storage cleanup.
-
-### User Management / Interaction
-
-When Epics #29–#30 are implemented, add:
-
-- [ ] profile update;
-- [ ] avatar lifecycle;
-- [ ] friends add/remove/list;
-- [ ] conversations/messages and third-user denial.
-
-### Realtime
-
-When Epic #31 is implemented, add:
-
-- [ ] authenticated WebSocket connection;
-- [ ] invalid connection rejection;
-- [ ] scoped broadcasting;
-- [ ] reconnect/disconnect behavior.
-
-### Analytics
-
-When Epic #32 is implemented, add:
-
-- [ ] KPIs and chart datasets;
-- [ ] date range/filter behavior;
-- [ ] permissions;
-- [ ] CSV/PDF exports;
-- [ ] realtime invalidation/update smoke.
+Those suites must be added when their features are implemented; they are not represented here as skipped or fake-passing mandatory tests.
 
 ## Completion rule
 
-For the Mandatory Compliance Epic, the mandatory test group plus the clean-install/multi-user manual checks are the relevant gate. The broader Issue #88 should remain open as a cross-project regression tracker until the selected optional modules have added their test groups.
+Issue #88 is ready when the mandatory `pytest` suite passes in the target environment and the deployment-specific checks are executed through Issues #20 and #21.
