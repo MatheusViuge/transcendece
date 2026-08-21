@@ -26,8 +26,17 @@ fi
 info "Validating Docker Compose configuration"
 docker compose config >/dev/null
 
-info "Building and starting the full stack"
-docker compose up --build -d
+info "Building backend image"
+docker compose build backend
+
+info "Building frontend image"
+docker compose build frontend
+
+info "Building reverse proxy image"
+docker compose build proxy
+
+info "Starting the full stack"
+docker compose up -d
 
 info "Waiting for the HTTPS API health endpoint"
 ATTEMPTS=0
