@@ -14,7 +14,7 @@ curl --silent --show-error --fail --insecure "$BASE_URL/explorar" >/dev/null
 info "Checking FastAPI through the reverse proxy"
 curl --silent --show-error --fail --insecure "$BASE_URL/api/status" \
     | grep -Eq '"status"[[:space:]]*:[[:space:]]*"ok"'
-curl --silent --show-error --fail --insecure "$BASE_URL/api/categories/" \
+curl --silent --show-error --fail --insecure "$BASE_URL/api/courses/" \
     | grep -Eq '"data"[[:space:]]*:'
 
 info "Checking Alembic single-head state"
