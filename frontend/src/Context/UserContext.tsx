@@ -2,6 +2,11 @@ import { api, catchCustom } from "@/services/api";
 import { useEffect, useState } from "react";
 import { UserContext, type IUserStorage } from "./userContextDefinition";
 
+type LoginResponse = {
+    access_token: string;
+    token_type: string;
+};
+
 export function UserProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<IUserStorage | null>(null);
     const [loading, setLoading] = useState(true);
@@ -10,9 +15,8 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         setLoading(true);
 
         try {
-            const responseAuth = await api.get({ url: "/auth/me", hiddenToast: true });
-            const authenticatedUser = responseAuth?.data as IUserStorage;
-            setUser(authenticatedUser);
+            const responseAuth = await api.get<IUserStorage>({ url: "/auth/me", hiddenToast: true });
+            setUser(responseAuth.data);
         } catch (error) {
             setUser(null);
             localStorage.removeItem("token");
@@ -39,8 +43,11 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         setLoading(true);
 
         try {
-            const responseLogin = await api.post<typeof body>({ url: "/auth/login", body });
-            const token = responseLogin?.data?.access_token;
+            const responseLogin = await api.post<typeof body, LoginResponse>({
+                url: "/auth/login",
+                body,
+            });
+            const token = responseLogin.data.access_token;
 
             if (!token) {
                 throw new Error("Token de autenticação não retornado pela API.");
