@@ -1,35 +1,27 @@
-from pydantic import BaseModel, Field, conint
-from typing import Optional, Annotated
 from datetime import datetime
+from typing import Annotated, Optional
 
-# Tipos anotados com validações
+from pydantic import BaseModel, ConfigDict, Field
+
+from app.schemas.base import StrictInputModel
+
 NotaType = Annotated[int, Field(ge=1, le=5, description="Nota da avaliação (1-5)")]
 ComentarioType = Annotated[Optional[str], Field(max_length=500, description="Comentário opcional")]
 
-##===================== AVALIACAO ========================##
 
-# Campos base (sem id, sem data_criacao)
-class AvaliacaoBase(BaseModel):
+class AvaliacaoCriar(StrictInputModel):
+    """Payload aceito para criação; curso e usuário vêm da URL/autenticação."""
+
     nota: NotaType
     comentario: ComentarioType = None
 
-# Schema de entrada quando o usuário está criando uma avaliação
-class AvaliacaoCriar(AvaliacaoBase):
-    curso_id: int
-    usuario_id: int
 
-# Schema de saída, aquilo que o servidor retorna ao consultar uma avaliação
-class AvaliacaoResponse(AvaliacaoBase):
+class AvaliacaoResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     curso_id: int
     usuario_id: int
+    nota: NotaType
+    comentario: ComentarioType = None
     data_criacao: datetime
-
-    class Config:
-        from_attributes = True  # Pydantic v2 - converte objetos SQLAlchemy
-
-# Schema opcional para atualização parcial (PATCH)
-# class AvaliacaoAtualizar(BaseModel):
-#    """Usado em PATCH: todos opcionais"""
-#    nota: Optional[NotaType] = None
-#    comentario: Optional[str] = None

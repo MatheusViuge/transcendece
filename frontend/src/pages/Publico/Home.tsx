@@ -5,42 +5,46 @@ import { BaseInput } from "@/components/Form";
 import { Button } from "@/components/Button";
 import { Link, useNavigate } from "react-router-dom";
 import Hero from "@/components/Hero";
-import { useEffect, useState } from "react";
-import { api, catchCustom } from "@/services/api";
-import type { ICursos } from "@/interfaces/cursos";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { searchSchema, type SearchFormData } from "@/pages/Publico/schemas/searchSchema";
 
 export default function Home() {
-  const [cursos, setCursos] = useState<ICursos[]>([]);
   const navigate = useNavigate();
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<SearchFormData>({
+    resolver: zodResolver(searchSchema),
+    defaultValues: { busca: "" },
+  });
 
-  const buscarCursos = async () => {
-    try {
-      const response = await api.get({ url: "/courses/", hiddenToast: true });
+  const onSearch = ({ busca }: SearchFormData) => {
+    const params = new URLSearchParams();
 
-      setCursos(response.data);
-    } catch (error) {
-      catchCustom(error);
-    }
+    if (busca) params.set("busca", busca);
+    const query = params.toString();
+    navigate(query ? `/explorar?${query}` : "/explorar");
   };
-
-  useEffect(() => {
-    buscarCursos();
-  }, []);
-  console.log(cursos);
-
-  function handleSubmit(event: any) {
-    event.preventDefault();
-    const busca = event.target.buscar.value;
-
-    navigate(`/explorar?busca=${busca}`);
-  }
 
   return (
     <div className="grid gap-8 pb-12">
       <Hero />
 
-      <form onSubmit={handleSubmit} className="grid xs:inline-flex gap-2 w-full max-w-200 px-4 mx-auto">
-        <BaseInput id="buscar" placeholder="O que você gostaria de aprender?" />
+      <form onSubmit={handleSubmit(onSearch)} className="grid xs:inline-flex gap-2 w-full max-w-200 px-4 mx-auto">
+        <div className="w-full">
+          <BaseInput
+            id="buscar"
+            placeholder="O que você gostaria de aprender?"
+            aria-invalid={Boolean(errors.busca)}
+            maxLength={120}
+            {...register("busca")}
+          />
+          {errors.busca && (
+            <p className="mt-1 text-xs text-red" role="alert">{errors.busca.message}</p>
+          )}
+        </div>
         <Button>Buscar</Button>
       </form>
 
@@ -52,7 +56,7 @@ export default function Home() {
         <div className="responsive gap-6 animate-fade-in">
           {cursosPopulares.map((curso) => (
             <Link to={`/cursos/${curso.id}`} key={curso.id}>
-              <Card key={curso.id} className="transition-all duration-300 hover:-translate-y-1">
+              <Card className="transition-all duration-300 hover:-translate-y-1">
                 <Card.Image src={curso.url_image||""} alt={curso.titulo} />
                 <Card.Body>
                   <Card.Title>{curso.titulo}</Card.Title>
@@ -66,7 +70,7 @@ export default function Home() {
         </div>
       </section>
 
-        <CategoriesGrid />
+      <CategoriesGrid />
     </div>
-  )
+  );
 }

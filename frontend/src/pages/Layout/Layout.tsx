@@ -5,10 +5,10 @@ import { ToastContainer, Slide } from "react-toastify";
 
 export function Layout() {
     return (
-        <div className="grid grid-rows-[1fr_auto] h-screen">
+        <div className="flex min-h-screen flex-col overflow-x-clip">
             <Navbar />
 
-            <main className="pt-navbar">
+            <main className="flex-1 pt-navbar">
                 <Outlet />
             </main>
 
@@ -30,4 +30,3 @@ export function Layout() {
         </div>
     );
 }
-

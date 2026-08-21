@@ -1,94 +1,118 @@
-# app/core/security.py
-from datetime import datetime, timedelta
-from fastapi import HTTPException, status, Depends, Request
-from jose import jwt, JWTError
+from datetime import datetime, timedelta, timezone
+
+from fastapi import Depends, HTTPException, Request, status
+from jose import JWTError, jwt
 from sqlalchemy.orm import Session
+
+from app.core.config import ACCESS_TOKEN_EXPIRE_MINUTES, JWT_ALGORITHM, JWT_SECRET_KEY
 from app.database import get_db
 from app.models.user import Usuario
-from app.core.config import JWT_SECRET_KEY, JWT_ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
+
+ALLOWED_ROLES = {"aluno", "instrutor", "admin"}
 
 
-# Função na qual gera o token JWT e retorna o mesmo
-def create_access_token(user_id: int, email: str , role: str):
+def create_access_token(user_id: int, email: str, role: str | None = None) -> str:
+    """Cria um access token assinado.
 
-	expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-
-	payload = {
-		"sub": str(user_id),
-		"email": email,
-		"role" : role,
-		"exp": expire
-	}
-
-	# jwt.encode = cria a string JWT segura e assinada
-	token = jwt.encode(payload, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
-
-	return token
-
-# Função para verificar se o token é valido
-def verify_token(token: str):
-	try:
-		'''
-		Decode decodifica o payload e header do token cria um novo a partir da secret key e verifica se os 2 batem.
-		E verifica algumas coisas a mais também como por exemplo campo exp (referente ao tem de expiração do token),
-		Caso de erro ele da um erro e eu trato isso apartir do JWTError que pega qualquer erro saindo do decode basicamente.
-		'''
-		payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
-
-		user_id = payload.get("sub")
-		email = payload.get("email")
-		role = payload.get("role")
-		exp = payload.get("exp")
-		return {"id": int(user_id), "email": email, "role": role, "exp": exp}
-
-	except JWTError:
-		raise HTTPException(
-			status_code=status.HTTP_401_UNAUTHORIZED,
-			detail="Token inválido ou expirado.")
-
-
-def allowed_roles(*list_roles: str):
+    `role` é aceito temporariamente por compatibilidade com os callers atuais,
+    porém autorização sempre consulta a role persistida no banco.
     """
-    Função que funciona como um decorador no FastAPI, deve ser usada através de um Depends nas rotas.
+    del role
+    now = datetime.now(timezone.utc)
+    expire = now + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    payload = {
+        "sub": str(user_id),
+        "email": email.strip().lower(),
+        "type": "access",
+        "iat": now,
+        "exp": expire,
+    }
+    return jwt.encode(payload, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
 
-    Exemplo de uso:
-        Depends(allowed_roles("aluno", "admin", "instrutor"))
 
-    Todas as roles passadas nos argumentos serão autorizadas.
-    Se não passar nada, qualquer role autenticada tem acesso.
-    """
-    def dependency(request: Request) -> dict:
-        """
-        Função dependência que retorna um dicionário com os dados do payload do usuário.
-        Primeiro tenta usar o que o middleware colocou em request.state.user.
-        Se não houver, faz o parse do header Authorization aqui mesmo.
-        """
+def verify_token(token: str) -> dict:
+    """Verifica assinatura, expiração e claims mínimos do access token."""
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Token inválido ou expirado.",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
 
-        # 1) Tenta pegar o usuário setado pelo middleware
-        user = getattr(request.state, "user", None)
+    try:
+        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
+        subject = payload.get("sub")
+        email = payload.get("email")
+        token_type = payload.get("type")
 
-        # 2) Se o middleware não setou, tentamos extrair o token direto do header
-        if user is None:
-            auth_header = request.headers.get("Authorization")
-            if not auth_header or not auth_header.startswith("Bearer "):
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Token não fornecido."
-                )
+        if token_type != "access" or not isinstance(subject, str) or not subject.isdigit():
+            raise credentials_exception
+        if not isinstance(email, str) or not email.strip():
+            raise credentials_exception
 
-            token = auth_header.split(" ", 1)[1]
-            user = verify_token(token)
+        return {
+            "id": int(subject),
+            "email": email.strip().lower(),
+            "exp": payload.get("exp"),
+            "iat": payload.get("iat"),
+        }
+    except (JWTError, ValueError, TypeError):
+        raise credentials_exception
 
-        role = user.get("role")
-        print(role)
 
-        # 3) Se foi passada uma lista de roles, validamos se a role do usuário é permitida
-        if list_roles and role not in list_roles:
+def _token_user_from_request(request: Request) -> dict:
+    user = getattr(request.state, "user", None)
+    if user is not None:
+        return user
+
+    auth_header = request.headers.get("Authorization", "")
+    scheme, separator, token = auth_header.partition(" ")
+    if separator != " " or scheme.lower() != "bearer" or not token.strip():
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token não fornecido.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    return verify_token(token.strip())
+
+
+def allowed_roles(*roles: str):
+    """Autoriza o usuário autenticado usando a role atual persistida no banco."""
+    unknown_roles = set(roles) - ALLOWED_ROLES
+    if unknown_roles:
+        raise ValueError(f"Roles desconhecidas configuradas na rota: {sorted(unknown_roles)}")
+
+    def dependency(
+        request: Request,
+        db: Session = Depends(get_db),
+    ) -> dict:
+        token_user = _token_user_from_request(request)
+        user = db.query(Usuario).filter(Usuario.id == token_user["id"]).first()
+
+        if not user or user.email.strip().lower() != token_user["email"]:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Role não permitida"
+                detail="Sessão inválida.",
+                headers={"WWW-Authenticate": "Bearer"},
             )
 
-        return user
+        current_role = user.tipo_usuario
+        if current_role not in ALLOWED_ROLES:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Role do usuário não é reconhecida.",
+            )
+
+        if roles and current_role not in roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Role não permitida.",
+            )
+
+        return {
+            "id": user.id,
+            "email": user.email,
+            "role": current_role,
+        }
 
     return dependency
