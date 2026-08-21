@@ -60,7 +60,7 @@ def test_fastapi_service_repository_orm_crud_flow(client):
     assert create.status_code == 201
     category_id = create.json()["data"]["id"]
 
-    list_response = client.get("/categories/")
+    list_response = client.get("/categories/", headers=headers)
     assert list_response.status_code == 200
     assert any(item["id"] == category_id for item in list_response.json()["data"])
 
@@ -76,6 +76,6 @@ def test_fastapi_service_repository_orm_crud_flow(client):
     assert delete.status_code == 200
     assert delete.json()["data"] is None
 
-    final_list = client.get("/categories/")
+    final_list = client.get("/categories/", headers=headers)
     assert final_list.status_code == 200
     assert all(item["id"] != category_id for item in final_list.json()["data"])
