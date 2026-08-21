@@ -1,3 +1,4 @@
+import type { FormEventHandler } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/Button";
@@ -8,26 +9,30 @@ import { ContainerInputs } from "@/components/Form";
 
 interface RegisterFormProps {
   form: UseFormReturn<RegisterFormData>;
-  onSubmit: () => void;
+  onSubmit: FormEventHandler<HTMLFormElement>;
   onOpenTerms: () => void;
 }
 
 export function RegisterForm({ form, onSubmit, onOpenTerms }: RegisterFormProps) {
   const navigate = useNavigate();
-  const { register, watch, formState: { errors } } = form;
-  
+  const {
+    register,
+    watch,
+    formState: { errors, isSubmitting },
+  } = form;
+
   const passwordValue = watch("senha_hash") || "";
-  
-  // Cast seguro para erros
   const formErrors = errors as unknown as Record<string, Record<string, string>>;
 
   return (
-    <form onSubmit={onSubmit}>
+    <form onSubmit={onSubmit} noValidate>
       <ContainerInputs>
         <Input
           id="nome"
           label="Nome"
           placeholder="Digite seu nome"
+          autoComplete="given-name"
+          maxLength={80}
           {...register("nome")}
           errors={formErrors}
         />
@@ -36,6 +41,8 @@ export function RegisterForm({ form, onSubmit, onOpenTerms }: RegisterFormProps)
           id="sobrenome"
           label="Sobrenome"
           placeholder="Digite seu sobrenome"
+          autoComplete="family-name"
+          maxLength={80}
           {...register("sobrenome")}
           errors={formErrors}
         />
@@ -44,7 +51,7 @@ export function RegisterForm({ form, onSubmit, onOpenTerms }: RegisterFormProps)
           id="data_nascimento"
           label="Data de Nascimento"
           type="date"
-          placeholder="Digite sua data de nascimento"
+          autoComplete="bday"
           {...register("data_nascimento")}
           errors={formErrors}
         />
@@ -54,6 +61,8 @@ export function RegisterForm({ form, onSubmit, onOpenTerms }: RegisterFormProps)
           type="email"
           label="Email"
           placeholder="seu@email.com"
+          autoComplete="email"
+          maxLength={254}
           {...register("email")}
           errors={formErrors}
         />
@@ -64,6 +73,8 @@ export function RegisterForm({ form, onSubmit, onOpenTerms }: RegisterFormProps)
             type="password"
             label="Senha"
             placeholder="••••••••"
+            autoComplete="new-password"
+            maxLength={128}
             {...register("senha_hash")}
             errors={formErrors}
           />
@@ -75,6 +86,8 @@ export function RegisterForm({ form, onSubmit, onOpenTerms }: RegisterFormProps)
           type="password"
           label="Confirmar Senha"
           placeholder="••••••••"
+          autoComplete="new-password"
+          maxLength={128}
           {...register("confirmPassword")}
           errors={formErrors}
         />
@@ -84,23 +97,27 @@ export function RegisterForm({ form, onSubmit, onOpenTerms }: RegisterFormProps)
           id="acceptedTerms"
           label={
             <>
-                Li e concordo com os{" "}
-                <button
-                  type="button"
-                  onClick={onOpenTerms}
-                  className="text-blue hover:underline cursor-pointer"
-                >Termos de Uso</button>{" "}
-                e Política de Privacidade.
+              Li e concordo com os{" "}
+              <button
+                type="button"
+                onClick={onOpenTerms}
+                className="text-blue hover:underline cursor-pointer"
+              >
+                Termos de Uso
+              </button>{" "}
+              e Política de Privacidade.
             </>
           }
           {...register("acceptedTerms")}
         />
 
         {errors.acceptedTerms && (
-          <p className="text-xs text-red mt-1">{errors.acceptedTerms.message}</p>
+          <p className="text-xs text-red mt-1" role="alert">{errors.acceptedTerms.message}</p>
         )}
 
-        <Button fullWidth type="submit">Criar Conta</Button>
+        <Button fullWidth type="submit" disabled={isSubmitting}>
+          {isSubmitting ? "Criando conta..." : "Criar Conta"}
+        </Button>
 
         <Button fullWidth variant="secondary" type="button" onClick={() => navigate("/")}>
           Voltar

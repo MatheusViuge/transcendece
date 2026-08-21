@@ -1,7 +1,7 @@
-import { Button } from "@/components/Button"; // Ajuste o caminho se necessário
-import { styles } from "./styles";
-import { basedPathProtected } from "@/pages/Layout/PrivateRoute";
+import { Button } from "@/components/Button";
+import { isProtectedPath } from "@/pages/Layout/protectedRoutes";
 import { useLocation } from "react-router-dom";
+import { styles } from "./styles";
 
 interface HeaderPriceProps {
   price: number;
@@ -9,25 +9,17 @@ interface HeaderPriceProps {
 
 export function HeaderPrice({ price }: HeaderPriceProps) {
   const location = useLocation();
-  const isProtectedRoute = basedPathProtected.some(path => location.pathname.startsWith(path));
-
-  // Lógica de formatação isolada aqui
-  const formattedPrice = new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL'
+  const isProtectedRoute = isProtectedPath(location.pathname);
+  const formattedPrice = new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
   }).format(price);
 
   return (
     <div className={styles.priceWrapper}>
-      <span className={styles.priceText}>
-        {formattedPrice}
-      </span>
-
+      <span className={styles.priceText}>{formattedPrice}</span>
       <div className={styles.buttonContainer + (isProtectedRoute ? " hidden" : "")}>
-        {/* Reutilizando Button e passando classes extras via className */}
-        <Button>
-          Começar Agora
-        </Button>
+        <Button>Começar Agora</Button>
       </div>
     </div>
   );

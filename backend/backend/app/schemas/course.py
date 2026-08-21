@@ -1,157 +1,90 @@
-from pydantic import BaseModel, Field
-from typing import Optional, Annotated
 from datetime import datetime
+from typing import Annotated, Optional
 
-# Tipos anotados com validações
-tituloType = Annotated[str, Field(max_length=200, min_length=1, description="Titulo do curso")]
-descricaoType = Annotated[str, Field(max_length=500, min_length=1, description="Descrição do curso")]
-cargaHorariaType = Annotated[int, Field(gt=0, description="Carga Horaria do curso")]
-idInstrutorType = Annotated[int, Field(gt=0, description="Id do instrutor")]
-idNivelType = Annotated[int, Field(gt=0, description="Id do nivel")]
-IdCategoriaType = Annotated[int, Field(gt=0, description="Id da categoria")]
-InstrutorOrNivel = Annotated[str, Field(max_length=200, description="Nome do instrutor ou Nivel")]
-mediaAvaliacao = Annotated[float, Field(default=0.0, description="Media de avalições")]
-qtdAvaliacao = Annotated[int, Field(default=0, description="Quantidade de avaliações")]
-precoType = Annotated[float, Field(default=0.0, description="Preço do curso")]
-urlImageType = Annotated[str, Field(max_length=255, description="URL da imagem do curso")]
+from pydantic import BaseModel, ConfigDict, Field
 
-# Tipos anotados para controle
-PrecoOptionalType = Annotated[
-    Optional[float],
-    Field(ge=0, description="Preço do curso (pode ser nulo, default 0)")
-]
+from app.schemas.base import StrictInputModel
 
-##===================== CURSO (BASE) ========================##
-# Respostas públicas (sem dados sensíveis)
+TituloType = Annotated[str, Field(max_length=200, min_length=1, description="Título do curso")]
+DescricaoType = Annotated[str, Field(max_length=500, min_length=1, description="Descrição do curso")]
+CargaHorariaType = Annotated[int, Field(gt=0, description="Carga horária do curso")]
+IdInstrutorType = Annotated[int, Field(gt=0, description="ID do instrutor")]
+IdNivelType = Annotated[int, Field(gt=0, description="ID do nível")]
+IdCategoriaType = Annotated[int, Field(gt=0, description="ID da categoria")]
+InstrutorOrNivel = Annotated[str, Field(max_length=200, description="Nome do instrutor ou nível")]
+MediaAvaliacao = Annotated[float, Field(ge=0, le=5, description="Média de avaliações")]
+QtdAvaliacao = Annotated[int, Field(ge=0, description="Quantidade de avaliações")]
+PrecoType = Annotated[float, Field(ge=0, description="Preço do curso")]
+UrlImageType = Annotated[str, Field(max_length=255, description="URL da imagem do curso")]
+PrecoOptionalType = Annotated[Optional[float], Field(ge=0, description="Preço do curso")]
+
+
 class CursoResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
-    url_image: Optional[urlImageType] = None
-    titulo: tituloType
+    url_image: Optional[UrlImageType] = None
+    titulo: TituloType
     id_instrutor: int
     instrutor: InstrutorOrNivel
     id_nivel: int
     nivel: InstrutorOrNivel
-    avaliacao: mediaAvaliacao
-    quantidade_avaliacoes: qtdAvaliacao
-    preco: precoType
+    avaliacao: MediaAvaliacao = 0.0
+    quantidade_avaliacoes: QtdAvaliacao = 0
+    preco: PrecoType = 0.0
 
-    class Config:
-        from_attributes = True  # Pydantic v2 - converte objetos SQLAlchemy
 
 class CursoEspecificoResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
-    titulo: tituloType
-    descricao: descricaoType
-    avaliacao: mediaAvaliacao
-    quantidade_avaliacoes: qtdAvaliacao
-    quantidade_horas: cargaHorariaType
+    titulo: TituloType
+    descricao: DescricaoType
+    avaliacao: MediaAvaliacao = 0.0
+    quantidade_avaliacoes: QtdAvaliacao = 0
+    quantidade_horas: CargaHorariaType
     id_nivel: int
     nivel: InstrutorOrNivel
-    preco: precoType
+    preco: PrecoType = 0.0
     id_instrutor: int
     instrutor: InstrutorOrNivel
     id_especialidade: int
     especialidade_instrutor: str
 
-    class Config:
-        from_attributes = True
 
-
-##===================== CURSO - CONTROLE (ADMIN/INSTRUTOR) ========================##
-# Contrato do front:
-# POST /courses
-# PUT  /courses/{id}
-# DELETE /courses/{id}
-# GET /courses/{id}/statistics
-
-# Campos base para criação/atualização de curso
-class CursoControleBase(BaseModel):
-    """
-    Campos base alinhados com o contrato do front para controle de cursos.
-    Usado tanto na criação quanto na edição.
-    """
-    titulo: tituloType
-    descricao: descricaoType                   # descrição curta do curso
+class CursoControleBase(StrictInputModel):
+    titulo: TituloType
+    descricao: DescricaoType
     id_categoria: IdCategoriaType
-    id_nivel: idNivelType
-    id_instrutor: Optional[idInstrutorType] = None
-    preco: PrecoOptionalType = 0.0            # float|null, default 0
+    id_nivel: IdNivelType
+    id_instrutor: Optional[IdInstrutorType] = None
+    preco: PrecoOptionalType = 0.0
 
-# Schema de entrada quando o usuário está criando um curso
+
 class CursoControleCriar(CursoControleBase):
-    """
-    Schema de entrada para criação de curso.
-    POST /courses
-
-    Regras de negócio:
-    - se role = admin, pode enviar qualquer/nenhum id_instrutor
-    - se role = instrutor, id_instrutor deve ser sobrescrito com o id do usuário logado
-    """
     pass
 
-# Schema de atualização quando o usuário está atualizando um curso
+
 class CursoControleAtualizar(CursoControleBase):
-    """
-    Schema de entrada para edição de curso.
-    PUT /courses/{id}
+    id: Annotated[int, Field(gt=0)]
 
-    O contrato do front inclui o "id" no body,
-    então mantemos esse campo aqui.
-    """
+
+class CursoControleResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
-
-# Schema de saída quando o usuário cria/edita um curso
-class CursoControleResponse(CursoControleBase):
-    """
-    Schema de saída ao criar/editar um curso na área de controle.
-    Respeita o contrato:
-
-        {
-            "id": int,
-            "titulo": ...,
-            "descricao": ...,
-            "sobre": ...,
-            "id_categoria": int,
-            "id_nivel": int,
-            "id_instrutor": int,
-            "preco": float|null
-        }
-
-    Obs.: 'sobre' representa a média das avaliações do curso e é calculada
-    pelo backend (por enquanto retornamos 0.0).
-    """
-    id: int
-    sobre: float = 0.0  # média das notas, calculada pelo backend
-
-    class Config:
-        from_attributes = True
+    titulo: TituloType
+    descricao: DescricaoType
+    id_categoria: IdCategoriaType
+    id_nivel: IdNivelType
+    id_instrutor: Optional[IdInstrutorType] = None
+    preco: PrecoOptionalType = 0.0
+    sobre: float = 0.0
 
 
-##===================== CURSOS - ESTATÍSTICAS ========================##
-# Schema de saída para estatísticas de cursos
 class CursoEstatisticaItem(BaseModel):
-    """
-    Item de estatística do curso.
+    model_config = ConfigDict(from_attributes=True)
 
-    Contrato do front (resposta é um ARRAY de itens):
-    [
-        {
-            "id": int,
-            "titulo": string,
-            "id_categoria": int,
-            "categoria": string,
-            "id_nivel": int,
-            "nivel": string,
-            "id_instrutor": int,
-            "instrutor": string,
-            "percentual_conclusao": float,
-            "media_notas": float,
-            "quantidade_alunos": int,
-            "data_criacao": Date,
-            "data_publicacao": Date
-        }
-    ]
-    """
     id: int
     titulo: str
     id_categoria: int
@@ -160,11 +93,8 @@ class CursoEstatisticaItem(BaseModel):
     nivel: str
     id_instrutor: int
     instrutor: str
-    percentual_conclusao: float
-    media_notas: float
-    quantidade_alunos: int
+    percentual_conclusao: Annotated[float, Field(ge=0, le=100)]
+    media_notas: Annotated[float, Field(ge=0, le=5)]
+    quantidade_alunos: Annotated[int, Field(ge=0)]
     data_criacao: datetime
     data_publicacao: Optional[datetime]
-
-    class Config:
-        from_attributes = True

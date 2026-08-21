@@ -1,4 +1,3 @@
-from .teste import Teste
 from .user import Usuario
 from .category import Categoria
 from .specialty import Especialidade

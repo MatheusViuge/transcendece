@@ -9,6 +9,8 @@ import PaginaEmConstrucao from "@/pages/PaginaEmConstrucao";
 import CourseDetails from "@/pages/Publico/CourseDetails";
 import Explore from "@/pages/Publico/Explore";
 import DashboardAluno from "@/pages/Aluno/Dashboard";
+import PrivacyPolicy from "@/pages/Publico/PrivacyPolicy";
+import TermsOfService from "@/pages/Publico/TermsOfService";
 
 export default function App() {
     return (
@@ -25,8 +27,8 @@ export default function App() {
 
                     <Route path="/sobre" element={<PaginaEmConstrucao />} />
                     <Route path="/contato" element={<PaginaEmConstrucao />} />
-                    <Route path="/privacidade" element={<PaginaEmConstrucao />} />
-                    <Route path="/termos" element={<PaginaEmConstrucao />} />
+                    <Route path="/privacidade" element={<PrivacyPolicy />} />
+                    <Route path="/termos" element={<TermsOfService />} />
 
                     <Route path="/instrutor">
                         <Route index element={<Navigate to={"/instrutor/dashboard"} />} />
@@ -63,4 +65,3 @@ export default function App() {
         </BrowserRouter>
     );
 }
-

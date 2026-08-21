@@ -4,8 +4,8 @@ interface AuthLayoutProps {
 
 export function AuthLayout({ children }: AuthLayoutProps) {
   return (
-    <div className="bg-linear-to-b from-blue-100 to-neutral-25 h-[calc(100vh-var(--spacing-navbar))] flex items-center justify-center bg-gray-50 px-4 py-12">
-      <div className="max-w-md w-full bg-white rounded-2xl shadow-lg p-6 md:p-8 flex flex-col gap-6 md:gap-8">
+    <div className="flex min-h-[calc(100dvh-var(--spacing-navbar))] items-start justify-center bg-linear-to-b from-blue-100 to-neutral-25 px-4 py-6 sm:items-center sm:py-12">
+      <div className="flex w-full max-w-md flex-col gap-6 rounded-2xl bg-white p-5 shadow-lg xs:p-6 md:gap-8 md:p-8">
         {children}
       </div>
     </div>

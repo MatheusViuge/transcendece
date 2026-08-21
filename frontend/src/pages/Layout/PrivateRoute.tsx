@@ -1,25 +1,26 @@
 import { useUser } from "@/hooks/useUser";
-import { useLocation, Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { Layout } from "./Layout";
 import { Loader } from "./Loader";
-
-export const basedPathProtected = ["/instrutor", "/aluno", "/admin"];
+import { protectedBasePaths } from "./protectedRoutes";
 
 export function PrivateRoute() {
     const { user, loading, isAuthenticated } = useUser();
     const role = user?.tipo_usuario;
+    const pathname = useLocation().pathname;
+    const protectedBasePath = protectedBasePaths.find(
+        (path) => pathname === path || pathname.startsWith(`${path}/`),
+    );
 
-    const from = useLocation().pathname;
-    const roleBasedPath = from.split("/")[1] || "/";
+    if (loading) return <Loader />;
+    if (!protectedBasePath) return <Layout />;
+    if (!isAuthenticated) return <Navigate to="/login" replace />;
 
-    if (loading)
-        return <Loader />;
+    const expectedRole = protectedBasePath.slice(1);
 
-    if (!isAuthenticated && basedPathProtected.some((path) => from.startsWith(path)))
-        return <Navigate to={"/login"} />;
-
-    if (isAuthenticated && role !== roleBasedPath)
-        return <Navigate to={"/"+role} />;
+    if (role !== expectedRole) {
+        return <Navigate to={role ? `/${role}` : "/"} replace />;
+    }
 
     return <Layout />;
 }

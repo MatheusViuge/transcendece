@@ -1,76 +1,63 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from datetime import datetime, timezone
+from typing import Annotated, Optional
+
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 from sqlalchemy import and_
-from app.database import get_db
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
+
+from app.core.response import success_response
 from app.core.security import allowed_roles
-from app.models.enrollment import Matricula
-from app.models.progress import ProgressoAulas
+from app.database import get_db
 from app.models.course import Curso
-from app.models.user import Usuario
+from app.models.enrollment import Matricula
+from app.models.instructor import Instrutor
 from app.models.lesson import Aula
 from app.models.module import Modulo
-from app.models.instructor import Instrutor
-from typing import List, Optional
-from datetime import datetime
-from app.core.response import success_response
+from app.models.progress import ProgressoAulas
+from app.models.user import Usuario
+from app.schemas.enrollment import EnrollmentCreate, EnrollmentStatus
 
-router = APIRouter(
-    prefix="/enrollments",
-    tags=["Enrollments"]
-)
+router = APIRouter(prefix="/enrollments", tags=["Enrollments"])
+PositivePathId = Annotated[int, Path(gt=0)]
 
 
-# Função auxiliar para checar autorização de acesso à matrícula
-def check_enrollment_access(matricula: Matricula, usuario: dict, db: Session, resource: str = "enrollment") -> bool:
-    """
-    Verifica se o usuário tem permissão para acessar a matrícula.
-
-    Args:
-        matricula: Objeto da matrícula
-        usuario: Dict com dados do usuário autenticado (id, role)
-        db: Sessão do banco
-        resource: Tipo de recurso para mensagem de erro
-
-    Returns:
-        True se tem acesso, lança HTTPException caso contrário
-    """
+def check_enrollment_access(
+    matricula: Matricula,
+    usuario: dict,
+    db: Session,
+    resource: str = "enrollment",
+) -> None:
     role = usuario.get("role")
     user_id = usuario.get("id")
 
     if role == "admin":
-        return True
+        return
 
-    if role == "aluno":
-        if matricula.aluno_id != user_id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Acesso negado a este {resource}"
-            )
-        return True
+    if role == "aluno" and matricula.aluno_id == user_id:
+        return
 
-    # instrutor
     if role == "instrutor":
         curso = db.query(Curso).filter(Curso.id == matricula.curso_id).first()
-        if not curso or curso.instrutor_id != user_id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Acesso negado a este {resource}"
-            )
-        return True
+        if curso and curso.instrutor_id == user_id:
+            return
 
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
-        detail=f"Acesso negado a este {resource}"
+        detail=f"Acesso negado a este {resource}.",
     )
 
 
-# Função auxiliar para serializar matricula com dados do aluno, curso e instrutor
 def serialize_enrollment(matricula: Matricula, db: Session) -> dict:
-    """Serializa uma matrícula em um dicionário com dados completos"""
     aluno = db.query(Usuario).filter(Usuario.id == matricula.aluno_id).first()
     curso = db.query(Curso).filter(Curso.id == matricula.curso_id).first()
-    instrutor = db.query(Instrutor).filter(Instrutor.id == curso.instrutor_id).first()
-    usuario_instrutor = db.query(Usuario).filter(Usuario.id == instrutor.id).first() if instrutor else None
+    instrutor = None
+    usuario_instrutor = None
+
+    if curso:
+        instrutor = db.query(Instrutor).filter(Instrutor.id == curso.instrutor_id).first()
+        if instrutor:
+            usuario_instrutor = db.query(Usuario).filter(Usuario.id == instrutor.id).first()
 
     return {
         "id": matricula.id,
@@ -79,114 +66,83 @@ def serialize_enrollment(matricula: Matricula, db: Session) -> dict:
         "id_curso": matricula.curso_id,
         "curso": curso.titulo if curso else "",
         "id_instrutor": curso.instrutor_id if curso else None,
-        "instrutor": f"{usuario_instrutor.nome} {usuario_instrutor.sobrenome}" if usuario_instrutor else "",
+        "instrutor": (
+            f"{usuario_instrutor.nome} {usuario_instrutor.sobrenome}"
+            if usuario_instrutor
+            else ""
+        ),
         "status_matricula": matricula.status_matricula,
-        "data_conclusao": matricula.data_conclusao
+        "data_conclusao": matricula.data_conclusao,
     }
 
 
 @router.get("/")
 def list_enrollments(
-    id_curso: Optional[int] = None,
-    id_aluno: Optional[int] = None,
-    status: Optional[str] = None,
+    id_curso: Annotated[Optional[int], Query(gt=0)] = None,
+    id_aluno: Annotated[Optional[int], Query(gt=0)] = None,
+    enrollment_status: Annotated[Optional[EnrollmentStatus], Query(alias="status")] = None,
     db: Session = Depends(get_db),
-    usuario=Depends(allowed_roles("aluno", "instrutor", "admin"))
+    usuario=Depends(allowed_roles("aluno", "instrutor", "admin")),
 ):
-    """
-    Lista matrículas com filtros opcionais.
-
-    - Aluno: vê apenas suas próprias matrículas
-    - Instrutor: vê matrículas dos alunos em seus cursos
-    - Admin: vê todas as matrículas
-    """
-    role = usuario.get("role")
-    user_id = usuario.get("id")
-
+    role = usuario["role"]
+    user_id = usuario["id"]
     query = db.query(Matricula)
 
-    # Filtros por role
     if role == "aluno":
         query = query.filter(Matricula.aluno_id == user_id)
-
     elif role == "instrutor":
         curso_ids = [
-            c.id for c in db.query(Curso)
-            .filter(Curso.instrutor_id == user_id)
-            .all()
+            curso.id
+            for curso in db.query(Curso).filter(Curso.instrutor_id == user_id).all()
         ]
-
         if not curso_ids:
             return success_response(
                 data=[],
-                message="Nenhuma matrícula encontrada para este instrutor",
-                status_code=200
+                message="Nenhuma matrícula encontrada para este instrutor.",
             )
-
         query = query.filter(Matricula.curso_id.in_(curso_ids))
 
-    # Filtros opcionais
     if id_curso is not None:
         query = query.filter(Matricula.curso_id == id_curso)
 
     if id_aluno is not None:
-        if role == "instrutor":
-            curso_ids = [
-                c.id for c in db.query(Curso)
-                .filter(Curso.instrutor_id == user_id)
-                .all()
-            ]
-            query = query.filter(
-                and_(
-                    Matricula.aluno_id == id_aluno,
-                    Matricula.curso_id.in_(curso_ids)
-                )
-            )
-        elif role == "aluno":
-            query = query.filter(Matricula.aluno_id == user_id)
-        else:
-            query = query.filter(Matricula.aluno_id == id_aluno)
+        if role == "aluno" and id_aluno != user_id:
+            raise HTTPException(status_code=403, detail="Acesso negado a outro aluno.")
+        query = query.filter(Matricula.aluno_id == id_aluno)
 
-    if status is not None:
-        query = query.filter(Matricula.status_matricula == status)
+    if enrollment_status is not None:
+        query = query.filter(Matricula.status_matricula == enrollment_status)
 
     matriculas = query.all()
-
-    data = [serialize_enrollment(m, db) for m in matriculas]
-
     return success_response(
-        data=data,
-        message="Matrículas listadas com sucesso",
-        status_code=200
+        data=[serialize_enrollment(item, db) for item in matriculas],
+        message="Matrículas listadas com sucesso.",
     )
-
 
 
 @router.get("/{enrollment_id}/progress")
 def get_enrollment_progress(
-    enrollment_id: int,
+    enrollment_id: PositivePathId,
     db: Session = Depends(get_db),
-    usuario=Depends(allowed_roles("aluno", "instrutor", "admin"))
+    usuario=Depends(allowed_roles("aluno", "instrutor", "admin")),
 ):
-    """
-    Retorna o progresso completo de uma matrícula
-    """
     matricula = db.query(Matricula).filter(Matricula.id == enrollment_id).first()
     if not matricula:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Matrícula não encontrada"
-        )
+        raise HTTPException(status_code=404, detail="Matrícula não encontrada.")
 
-    # Autorização
     check_enrollment_access(matricula, usuario, db, "matrícula")
 
     aluno = db.query(Usuario).filter(Usuario.id == matricula.aluno_id).first()
     curso = db.query(Curso).filter(Curso.id == matricula.curso_id).first()
-    instrutor = db.query(Instrutor).filter(Instrutor.id == curso.instrutor_id).first()
+    instrutor = (
+        db.query(Instrutor).filter(Instrutor.id == curso.instrutor_id).first()
+        if curso
+        else None
+    )
     usuario_instrutor = (
         db.query(Usuario).filter(Usuario.id == instrutor.id).first()
-        if instrutor else None
+        if instrutor
+        else None
     )
 
     modulos = (
@@ -207,197 +163,171 @@ def get_enrollment_progress(
             .order_by(Aula.ordem_aula)
             .all()
         )
-
         for aula in aulas:
             total_aulas += 1
-
             progresso = (
                 db.query(ProgressoAulas)
                 .filter(
-                    and_(
-                        ProgressoAulas.matricula_id == enrollment_id,
-                        ProgressoAulas.aula_id == aula.id
-                    )
+                    ProgressoAulas.matricula_id == enrollment_id,
+                    ProgressoAulas.aula_id == aula.id,
                 )
                 .first()
             )
-
             if progresso and progresso.concluido:
                 aulas_concluidas += 1
 
-            aulas_list.append({
-                "id_aula": aula.id,
-                "titulo_aula": aula.titulo,
-                "ordem_aula": aula.ordem_aula,
-                "id_modulo": modulo.id,
-                "titulo_modulo": modulo.titulo,
-                "ordem_modulo": modulo.ordem,
-                "progresso_aula": progresso.progresso_percentual if progresso else 0,
-                "concluido": progresso.concluido if progresso else False,
-                "data_conclusao": progresso.data_conclusao if progresso else None
-            })
+            aulas_list.append(
+                {
+                    "id_aula": aula.id,
+                    "titulo_aula": aula.titulo,
+                    "ordem_aula": aula.ordem_aula,
+                    "id_modulo": modulo.id,
+                    "titulo_modulo": modulo.titulo,
+                    "ordem_modulo": modulo.ordem,
+                    "progresso_aula": progresso.progresso_percentual if progresso else 0,
+                    "concluido": progresso.concluido if progresso else False,
+                    "data_conclusao": progresso.data_conclusao if progresso else None,
+                }
+            )
 
-    progresso_curso = (aulas_concluidas / total_aulas * 100) if total_aulas > 0 else 0
-
-    data = {
-        "id": matricula.id,
-        "id_aluno": matricula.aluno_id,
-        "aluno": f"{aluno.nome} {aluno.sobrenome}" if aluno else "",
-        "id_curso": matricula.curso_id,
-        "curso": curso.titulo if curso else "",
-        "id_instrutor": curso.instrutor_id if curso else None,
-        "instrutor": (
-            f"{usuario_instrutor.nome} {usuario_instrutor.sobrenome}"
-            if usuario_instrutor else ""
-        ),
-        "status_matricula": matricula.status_matricula,
-        "data_conclusao": matricula.data_conclusao,
-        "progresso_curso": round(progresso_curso, 2),
-        "aulas": aulas_list
-    }
+    progresso_curso = (aulas_concluidas / total_aulas * 100) if total_aulas else 0
+    data = serialize_enrollment(matricula, db)
+    data.update(
+        {
+            "aluno": f"{aluno.nome} {aluno.sobrenome}" if aluno else "",
+            "instrutor": (
+                f"{usuario_instrutor.nome} {usuario_instrutor.sobrenome}"
+                if usuario_instrutor
+                else ""
+            ),
+            "progresso_curso": round(progresso_curso, 2),
+            "aulas": aulas_list,
+        }
+    )
 
     return success_response(
         data=data,
-        message="Progresso da matrícula retornado com sucesso",
-        status_code=200
+        message="Progresso da matrícula retornado com sucesso.",
     )
-
 
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
 def create_enrollment(
-    payload: dict,
+    payload: EnrollmentCreate,
     db: Session = Depends(get_db),
-    usuario=Depends(allowed_roles("aluno", "instrutor", "admin"))
+    usuario=Depends(allowed_roles("aluno", "instrutor", "admin")),
 ):
-    """
-    Cria uma nova matrícula.
-    """
-    role = usuario.get("role")
-    user_id = usuario.get("id")
+    role = usuario["role"]
+    user_id = usuario["id"]
 
-    id_curso = payload.get("id_curso")
-
-    if not id_curso:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Campo 'id_curso' é obrigatório"
-        )
-
-    curso = db.query(Curso).filter(Curso.id == id_curso).first()
+    curso = db.query(Curso).filter(Curso.id == payload.id_curso).first()
     if not curso:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Curso não encontrado"
-        )
+        raise HTTPException(status_code=404, detail="Curso não encontrado.")
 
     if role == "aluno":
+        if payload.id_aluno is not None and payload.id_aluno != user_id:
+            raise HTTPException(status_code=403, detail="Aluno não pode matricular outro usuário.")
         id_aluno = user_id
     else:
-        id_aluno = payload.get("id_aluno")
-        if not id_aluno:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Campo 'id_aluno' é obrigatório para instrutor/admin"
-            )
+        if payload.id_aluno is None:
+            raise HTTPException(status_code=422, detail="id_aluno é obrigatório para esta role.")
+        id_aluno = payload.id_aluno
+
+    if role == "instrutor" and curso.instrutor_id != user_id:
+        raise HTTPException(status_code=403, detail="Instrutor só pode matricular em seus cursos.")
 
     aluno = db.query(Usuario).filter(Usuario.id == id_aluno).first()
-    if not aluno:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Aluno não encontrado"
-        )
+    if not aluno or aluno.tipo_usuario != "aluno":
+        raise HTTPException(status_code=404, detail="Aluno não encontrado.")
 
-    existente = db.query(Matricula).filter(
-        and_(
-            Matricula.curso_id == id_curso,
-            Matricula.aluno_id == id_aluno,
-            Matricula.status_matricula == "ativa"
-        )
-    ).first()
+    existente = (
+        db.query(Matricula)
+        .filter(Matricula.curso_id == payload.id_curso, Matricula.aluno_id == id_aluno)
+        .with_for_update()
+        .first()
+    )
 
     if existente:
+        if existente.status_matricula == "ativa":
+            raise HTTPException(status_code=409, detail="Aluno já possui matrícula ativa neste curso.")
+        existente.status_matricula = "ativa"
+        existente.data_conclusao = None
+        existente.data_matricula = datetime.now(timezone.utc)
+        matricula = existente
+    else:
+        matricula = Matricula(
+            aluno_id=id_aluno,
+            curso_id=payload.id_curso,
+            status_matricula="ativa",
+        )
+        db.add(matricula)
+
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Aluno já possui matrícula ativa neste curso"
+            status_code=409,
+            detail="Conflito de matrícula. A operação foi executada simultaneamente.",
         )
 
-    nova_matricula = Matricula(
-        aluno_id=id_aluno,
-        curso_id=id_curso,
-        status_matricula="ativa"
-    )
-
-    db.add(nova_matricula)
-    db.commit()
-    db.refresh(nova_matricula)
-
+    db.refresh(matricula)
     return success_response(
-        data=serialize_enrollment(nova_matricula, db),
-        message="Matrícula criada com sucesso",
-        status_code=status.HTTP_201_CREATED
+        data=serialize_enrollment(matricula, db),
+        message="Matrícula criada com sucesso.",
+        status_code=status.HTTP_201_CREATED,
     )
 
 
-@router.delete("/{enrollment_id}", status_code=status.HTTP_200_OK)
+@router.delete("/{enrollment_id}")
 def delete_enrollment(
-    enrollment_id: int,
+    enrollment_id: PositivePathId,
     db: Session = Depends(get_db),
-    usuario=Depends(allowed_roles("aluno", "instrutor", "admin"))
+    usuario=Depends(allowed_roles("aluno", "instrutor", "admin")),
 ):
-    """
-    Cancela uma matrícula (soft delete).
-    """
-    matricula = db.query(Matricula).filter(Matricula.id == enrollment_id).first()
+    matricula = (
+        db.query(Matricula)
+        .filter(Matricula.id == enrollment_id)
+        .with_for_update()
+        .first()
+    )
     if not matricula:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Matrícula não encontrada"
-        )
+        raise HTTPException(status_code=404, detail="Matrícula não encontrada.")
 
     check_enrollment_access(matricula, usuario, db, "matrícula")
-
     matricula.status_matricula = "cancelada"
+    matricula.data_conclusao = None
     db.commit()
 
-    return success_response(
-        data=None,
-        message="Matrícula cancelada com sucesso",
-        status_code=status.HTTP_200_OK
-    )
+    return success_response(data=None, message="Matrícula cancelada com sucesso.")
 
-@router.patch("/{enrollment_id}/classes/{class_id}/toggle", status_code=status.HTTP_200_OK)
+
+@router.patch("/{enrollment_id}/classes/{class_id}/toggle")
 def toggle_class(
-    enrollment_id: int,
-    class_id: int,
+    enrollment_id: PositivePathId,
+    class_id: PositivePathId,
     db: Session = Depends(get_db),
-    usuario=Depends(allowed_roles("aluno", "instrutor", "admin"))
+    usuario=Depends(allowed_roles("aluno", "instrutor", "admin")),
 ):
-    """
-    Alterna o status de conclusão de uma aula.
-    """
     matricula = db.query(Matricula).filter(Matricula.id == enrollment_id).first()
     if not matricula:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Matrícula não encontrada"
-        )
+        raise HTTPException(status_code=404, detail="Matrícula não encontrada.")
 
     check_enrollment_access(matricula, usuario, db, "matrícula")
 
     aula = db.query(Aula).filter(Aula.id == class_id).first()
-    if not aula:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Aula não encontrada"
-        )
+    if not aula or not aula.modulo or aula.modulo.curso_id != matricula.curso_id:
+        raise HTTPException(status_code=404, detail="Aula não pertence ao curso da matrícula.")
 
-    progresso = db.query(ProgressoAulas).filter(
-        and_(
+    progresso = (
+        db.query(ProgressoAulas)
+        .filter(
             ProgressoAulas.matricula_id == enrollment_id,
-            ProgressoAulas.aula_id == class_id
+            ProgressoAulas.aula_id == class_id,
         )
-    ).first()
+        .with_for_update()
+        .first()
+    )
 
     if not progresso:
         progresso = ProgressoAulas(
@@ -405,30 +335,35 @@ def toggle_class(
             aula_id=class_id,
             progresso_percentual=100,
             concluido=True,
-            data_conclusao=datetime.utcnow()
+            data_conclusao=datetime.now(timezone.utc),
         )
         db.add(progresso)
-        message = "Aula marcada como concluída"
+        message = "Aula marcada como concluída."
     else:
         progresso.concluido = not progresso.concluido
-        if progresso.concluido:
-            progresso.progresso_percentual = 100
-            progresso.data_conclusao = datetime.utcnow()
-            message = "Aula marcada como concluída"
-        else:
-            progresso.progresso_percentual = 0
-            progresso.data_conclusao = None
-            message = "Aula desmarcada como concluída"
+        progresso.progresso_percentual = 100 if progresso.concluido else 0
+        progresso.data_conclusao = datetime.now(timezone.utc) if progresso.concluido else None
+        message = (
+            "Aula marcada como concluída."
+            if progresso.concluido
+            else "Aula desmarcada como concluída."
+        )
 
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail="Conflito de progresso. Recarregue o estado e tente novamente.",
+        )
 
     return success_response(
         data={
             "id_aula": class_id,
             "concluido": progresso.concluido,
             "progresso_percentual": progresso.progresso_percentual,
-            "data_conclusao": progresso.data_conclusao
+            "data_conclusao": progresso.data_conclusao,
         },
         message=message,
-        status_code=status.HTTP_200_OK
     )

@@ -1,102 +1,115 @@
-from fastapi import APIRouter, Depends, status, HTTPException, status
-from sqlalchemy.orm import Session
-from app.database import get_db
-from app.services.auth_service import create_salt, verify_password, get_password_hash
-from app.core.security import allowed_roles
-
-from app.models.user import Usuario
-from app.schemas.user import UsuarioCriar, UsuarioResponse, TokenResponse, UsuarioLogin
-from app.schemas.user import UsuarioLogin
+from datetime import datetime, timezone
 from typing import List
-from app.core.security import create_access_token
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
+
 from app.core.response import success_response
+from app.core.security import allowed_roles, create_access_token
+from app.database import get_db
+from app.models.user import Usuario
+from app.schemas.user import TokenResponse, UsuarioCriar, UsuarioLogin, UsuarioResponse
+from app.services.auth_service import get_password_hash, verify_password
 
 router = APIRouter(
-	prefix="/auth",
-	tags=["Auth"]
+    prefix="/auth",
+    tags=["Auth"],
 )
 
+
 @router.post("/register", response_model=UsuarioResponse, status_code=status.HTTP_201_CREATED)
-def registra_usuario(
-	usuario: UsuarioCriar, db: Session = Depends(get_db)
-):
+def registra_usuario(usuario: UsuarioCriar, db: Session = Depends(get_db)):
+    """Registra um usuário público sempre com a role segura padrão `aluno`."""
+    email = str(usuario.email).strip().lower()
+    ja_existe = db.query(Usuario).filter(Usuario.email == email).first()
 
-	"""Função que registra o usuario no banco"""
+    if ja_existe:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Usuário já cadastrado.",
+        )
 
-	ja_existe = db.query(Usuario).filter(
-		Usuario.email == usuario.email
-	).first()
+    db_usuario = Usuario(
+        nome=usuario.nome,
+        sobrenome=usuario.sobrenome,
+        email=email,
+        senha_hash=get_password_hash(usuario.senha_hash),
+        tipo_usuario="aluno",
+        data_nascimento=usuario.data_nascimento,
+    )
 
-	if ja_existe:
-		raise HTTPException(
-			status_code=status.HTTP_400_BAD_REQUEST,
-			detail="Usuario ja cadastrado!"
-		)
-	db_usuario = Usuario(
-		nome = usuario.nome,
-		sobrenome = usuario.sobrenome,
-		email = usuario.email,
-		senha_hash = get_password_hash(create_salt(usuario.senha_hash, usuario.email)),
-		tipo_usuario = usuario.tipo_usuario,
-		data_nascimento = usuario.data_nascimento
-	)
+    db.add(db_usuario)
+    db.commit()
+    db.refresh(db_usuario)
 
-	db.add(db_usuario)
-	db.commit()
-	db.refresh(db_usuario)
+    return success_response(
+        data=UsuarioResponse.model_validate(db_usuario),
+        message="Usuário registrado com sucesso.",
+        status_code=status.HTTP_201_CREATED,
+    )
 
-	return success_response(
-		data=UsuarioResponse.model_validate(db_usuario),
-		message="Usuário registrado com sucesso.",
-		status_code=status.HTTP_201_CREATED
-	)
 
 @router.get("/usuarios", response_model=List[UsuarioResponse])
-def listar_usuarios(db: Session = Depends(get_db) , require = Depends(allowed_roles("admin"))):
-	"""Função que retorna todos os usuarios cadastrados"""
-	query = db.query(Usuario)
-	print(query)
+def listar_usuarios(
+    db: Session = Depends(get_db),
+    require=Depends(allowed_roles("admin")),
+):
+    """Retorna usuários cadastrados para administradores."""
+    del require
+    usuarios = db.query(Usuario).all()
 
-	return success_response(
-		data=[UsuarioResponse.model_validate(u) for u in query],
-		message="Usuários listados com sucesso."
-	)
+    return success_response(
+        data=[UsuarioResponse.model_validate(usuario) for usuario in usuarios],
+        message="Usuários listados com sucesso.",
+    )
 
-# Rota de login
 
 @router.post("/login", response_model=TokenResponse)
 def login(data: UsuarioLogin, db: Session = Depends(get_db)):
-	"""
-	Login do usuario, recebe email e senha adiciona o salt e verifica se existe e é real.
-	"""
-	user = db.query(Usuario).filter(Usuario.email == data.email).first()
-	if not user:
-		raise HTTPException(
-			status_code=status.HTTP_401_UNAUTHORIZED,
-			detail="Credenciais inválidas"
-			)
+    """Autentica por email/senha e emite JWT somente após verificação do hash."""
+    email = str(data.email).lower()
+    user = db.query(Usuario).filter(Usuario.email == email).first()
 
-	senha_com_salt = create_salt(data.senha, user.email)
-	if not verify_password(senha_com_salt, user.senha_hash):
-		raise HTTPException(
-			status_code=status.HTTP_401_UNAUTHORIZED,
-			detail="Credenciais inválidas"
-			)
+    if not user or not verify_password(data.senha, user.senha_hash):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Credenciais inválidas.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
-	token = create_access_token(user_id=user.id, email=user.email, role=user.tipo_usuario)
-	return success_response(
-		data={"access_token": token},
-		message="Login realizado com sucesso",
-		status_code=status.HTTP_200_OK
-	)
+    user.ultimo_login = datetime.now(timezone.utc)
+    db.commit()
 
-# Rota para obter informações do usuário autenticado
+    token = create_access_token(
+        user_id=user.id,
+        email=user.email,
+        role=user.tipo_usuario,
+    )
+
+    return success_response(
+        data={"access_token": token, "token_type": "bearer"},
+        message="Login realizado com sucesso.",
+        status_code=status.HTTP_200_OK,
+    )
+
+
 @router.get("/me", response_model=UsuarioResponse)
-def get_me(db:Session = Depends(get_db), usuario = Depends(allowed_roles())):
-	"""Rota para obter informações do usuário autenticado"""
-	user = db.query(Usuario).filter(Usuario.id == usuario["id"]).first()
-	return success_response(
-		data=UsuarioResponse.model_validate(user),
-		message="Dados do usuário retornados com sucesso.",
-		status_code=status.HTTP_200_OK
-	)
+def get_me(
+    db: Session = Depends(get_db),
+    usuario=Depends(allowed_roles()),
+):
+    """Retorna informações públicas do usuário autenticado."""
+    user = db.query(Usuario).filter(Usuario.id == usuario["id"]).first()
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Usuário autenticado não encontrado.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    return success_response(
+        data=UsuarioResponse.model_validate(user),
+        message="Dados do usuário retornados com sucesso.",
+        status_code=status.HTTP_200_OK,
+    )

@@ -1,27 +1,22 @@
-from pydantic import BaseModel, Field
 from typing import Annotated, Optional
 
+from pydantic import BaseModel, ConfigDict, Field
 
-descriptionType = Annotated[str, Field(min_length=1, max_length=20, description="descrição do nivel")]
+from app.schemas.base import StrictInputModel
+
+DescriptionType = Annotated[str, Field(min_length=1, max_length=20, description="Descrição do nível")]
 
 
-class NivelBase(BaseModel):
-	"""Schema base da nivel"""
-	descricao: descriptionType
+class NivelCreate(StrictInputModel):
+    descricao: DescriptionType
 
-class NivelCreate(NivelBase):
-	"""Schema de criação da nivel"""
-	pass
 
-class NivelResponse(NivelBase):
-	"""Schema de resposta da nivel"""
-	id: int
+class NivelResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
 
-	class Config:
-		from_attributes = True
+    id: int
+    descricao: DescriptionType
 
-class NivelUpdate(BaseModel):
-	"""Schema de update , metodo patch"""
 
-	descricao: Optional[descriptionType] = None
-
+class NivelUpdate(StrictInputModel):
+    descricao: Optional[DescriptionType] = None
