@@ -20,6 +20,10 @@ def _is_public_request(request: Request, normalized_path: str) -> bool:
     if request.method == "OPTIONS":
         return True
 
+    if normalized_path == "/v1/public" or normalized_path.startswith("/v1/public/"):
+        # Public API authentication is handled by X-API-Key dependencies.
+        return True
+
     if normalized_path in PUBLIC_PATHS:
         return True
 
