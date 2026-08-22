@@ -95,7 +95,7 @@ def current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    if not user.is_active:
+    if not getattr(user, "is_active", True):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Conta desativada.",
@@ -112,17 +112,25 @@ def current_user(
         "id": user.id,
         "email": user.email,
         "role": current_role,
-        "is_active": bool(user.is_active),
+        "is_active": bool(getattr(user, "is_active", True)),
     }
 
 
 def allowed_roles(*roles: str):
-    """Autoriza o usuário autenticado usando a role atual persistida no banco."""
+    """Autoriza usando a role atual persistida no banco.
+
+    A assinatura `(request, db)` é mantida para compatibilidade com os testes e
+    callers diretos existentes, enquanto o FastAPI injeta ambos normalmente.
+    """
     unknown_roles = set(roles) - ALLOWED_ROLES
     if unknown_roles:
         raise ValueError(f"Roles desconhecidas configuradas na rota: {sorted(unknown_roles)}")
 
-    def dependency(usuario: dict = Depends(current_user)) -> dict:
+    def dependency(
+        request: Request,
+        db: Session = Depends(get_db),
+    ) -> dict:
+        usuario = current_user(request, db)
         if roles and usuario["role"] not in roles:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
