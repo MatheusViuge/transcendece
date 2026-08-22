@@ -35,6 +35,8 @@ jobs:
         run: npm run build
       - name: Design System structural check
         run: sh ../scripts/design-system-check.sh
+      - name: PWA structural and security check
+        run: sh ../scripts/pwa-check.sh
 
   backend:
     name: Backend mandatory regression
@@ -148,6 +150,20 @@ jobs:
           curl --silent --show-error --fail --insecure https://localhost/privacidade >/dev/null
           curl --silent --show-error --fail --insecure https://localhost/termos >/dev/null
           curl --silent --show-error --fail --insecure https://localhost/design-system >/dev/null
+      - name: Verify PWA assets through HTTPS
+        shell: bash
+        run: |
+          curl --silent --show-error --fail --insecure https://localhost/manifest.webmanifest -o /tmp/manifest.webmanifest
+          grep -q '"display": "standalone"' /tmp/manifest.webmanifest
+          grep -q '"sizes": "192x192"' /tmp/manifest.webmanifest
+          grep -q '"sizes": "512x512"' /tmp/manifest.webmanifest
+          sw_headers=$(curl --silent --show-error --head --insecure https://localhost/sw.js)
+          printf '%s\n' "$sw_headers" | grep -Eiq '^cache-control: .*no-cache.*no-store'
+          curl --silent --show-error --fail --insecure https://localhost/sw.js | grep -q 'CACHE_VERSION'
+          curl --silent --show-error --fail --insecure https://localhost/offline.html | grep -q 'Você está offline'
+          curl --silent --show-error --fail --insecure https://localhost/pwa/icon-192.png >/dev/null
+          curl --silent --show-error --fail --insecure https://localhost/pwa/icon-512.png >/dev/null
+          ! curl --silent --show-error --fail --insecure https://localhost/ | grep -q '__BRAND_NAME__'
       - name: Verify Framework and ORM module integration
         run: sh scripts/framework-orm-smoke.sh
       - name: Verify internal ports are not public
@@ -194,4 +210,4 @@ jobs:
       - name: Print Git author summary for human review
         run: git shortlog -sne --all
       - name: Confirm automated mandatory checks
-        run: echo 'Frontend, backend, deployment, Framework/ORM, Design System and secret-file checks passed.'
+        run: echo 'Frontend, backend, deployment, Framework/ORM, Design System, PWA and secret-file checks passed.'
