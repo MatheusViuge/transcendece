@@ -20,12 +20,12 @@ Todos os endpoints da Public API exigem:
 X-API-Key: <secret>
 ```
 
-API keys são gerenciadas por um usuário autenticado com JWT nos endpoints internos `/api/api-keys`. O secret completo é devolvido **somente** na criação ou rotação. O banco armazena apenas hash SHA-256, prefixo identificável e metadados.
+API keys são gerenciadas por um usuário autenticado com JWT nos endpoints internos `/api/keys`. O secret completo é devolvido **somente** na criação ou rotação. O banco armazena apenas hash SHA-256, prefixo identificável e metadados.
 
 ### Criar uma API key
 
 ```bash
-curl -k -X POST https://localhost/api/api-keys \
+curl -k -X POST https://localhost/api/keys \
   -H "Authorization: Bearer <JWT>" \
   -H "Content-Type: application/json" \
   -d '{"name":"integration","scopes":["courses:read","courses:write"]}'
@@ -36,9 +36,9 @@ curl -k -X POST https://localhost/api/api-keys \
 ### Listar / revogar / rotacionar
 
 ```bash
-curl -k https://localhost/api/api-keys -H "Authorization: Bearer <JWT>"
-curl -k -X DELETE https://localhost/api/api-keys/<KEY_ID> -H "Authorization: Bearer <JWT>"
-curl -k -X POST https://localhost/api/api-keys/<KEY_ID>/rotate -H "Authorization: Bearer <JWT>"
+curl -k https://localhost/api/keys -H "Authorization: Bearer <JWT>"
+curl -k -X DELETE https://localhost/api/keys/<KEY_ID> -H "Authorization: Bearer <JWT>"
+curl -k -X POST https://localhost/api/keys/<KEY_ID>/rotate -H "Authorization: Bearer <JWT>"
 ```
 
 Uma key revogada deixa de autenticar imediatamente. Usuários só podem administrar suas próprias keys.
