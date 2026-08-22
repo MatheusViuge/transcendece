@@ -2,22 +2,22 @@
 
 Parent Epic: #25
 
-## Automated
+## Automated — CI #100
 
-- [ ] backend regression passes
-- [ ] `tests/test_advanced_search.py` passes
-- [ ] `tests/test_seed_advanced_search.py` passes
-- [ ] frontend lint passes
-- [ ] frontend production build passes
-- [ ] `sh scripts/search-check.sh` passes
-- [ ] Docker images build in the serial backend → frontend → proxy order
-- [ ] PostgreSQL becomes healthy and Alembic is at the single head
-- [ ] manual Advanced Search seed runs twice on PostgreSQL without duplicate seed records
-- [ ] exactly 30 seed courses and 12 seed users remain after the second run
-- [ ] `/explorar` is served through HTTPS
-- [ ] `/api/search/courses` is available through HTTPS/Nginx
-- [ ] seeded `100%` course is searchable through HTTPS
-- [ ] invalid `sort` returns HTTP 422 through HTTPS
+- [x] backend regression passes
+- [x] `tests/test_advanced_search.py` passes
+- [x] `tests/test_seed_advanced_search.py` passes
+- [x] frontend lint passes
+- [x] frontend production build passes
+- [x] `sh scripts/search-check.sh` passes
+- [x] Docker images build in the serial backend → frontend → proxy order
+- [x] PostgreSQL becomes healthy and Alembic is at the single head
+- [x] manual Advanced Search seed runs twice on PostgreSQL without duplicate seed records
+- [x] exactly 30 seed courses and 12 seed users remain after the second run
+- [x] `/explorar` is served through HTTPS
+- [x] `/api/search/courses` is available through HTTPS/Nginx
+- [x] seeded `100%` course is searchable through HTTPS
+- [x] invalid `sort` returns HTTP 422 through HTTPS
 
 ## Manual setup
 
@@ -54,8 +54,9 @@ All seed users use password `SearchSeed42!`.
 
 ## Module gate
 
-- [ ] #46 validated
-- [ ] #47 validated
-- [ ] #48 validated
-- [ ] #49 evidence recorded
+- [x] #46 automated implementation/evidence ready
+- [x] #47 automated implementation/evidence ready
+- [x] #48 automated implementation/evidence ready
+- [x] #49 automated evidence recorded
+- [ ] reviewer manual UX spot-check
 - [ ] Epic #25 ready to merge/close
