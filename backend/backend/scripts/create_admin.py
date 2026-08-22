@@ -29,6 +29,13 @@ def _parse_birth_date(value: str) -> date:
         raise BootstrapError("Data de nascimento inválida. Use YYYY-MM-DD.") from exc
 
 
+def _ensure_bootstrap_available(db: Session) -> None:
+    if db.query(Usuario.id).filter(Usuario.tipo_usuario == "admin").first() is not None:
+        raise BootstrapError(
+            "Já existe uma conta admin. Use o painel /admin/usuarios para administrar outras contas."
+        )
+
+
 def create_first_admin(
     db: Session,
     *,
@@ -38,10 +45,10 @@ def create_first_admin(
     senha: str,
     data_nascimento: date,
 ) -> Usuario:
-    if db.query(Usuario.id).filter(Usuario.tipo_usuario == "admin").first() is not None:
-        raise BootstrapError(
-            "Já existe uma conta admin. Use o painel /admin/usuarios para administrar outras contas."
-        )
+    # Keep this check even though main() performs the same preflight before
+    # collecting credentials. It protects direct callers and re-checks the
+    # database immediately before creation.
+    _ensure_bootstrap_available(db)
 
     normalized_email = _normalize_email(email)
     if db.query(Usuario.id).filter(Usuario.email == normalized_email).first() is not None:
@@ -101,14 +108,18 @@ def main() -> None:
     parser.add_argument("--email", help="Email do primeiro admin. Se omitido, será solicitado interativamente.")
     args = parser.parse_args()
 
-    nome = _prompt_required("Nome")
-    sobrenome = _prompt_required("Sobrenome")
-    email = args.email.strip() if args.email else _prompt_required("Email")
-    data_nascimento = _parse_birth_date(_prompt_required("Data de nascimento (YYYY-MM-DD)"))
-    senha = _prompt_password()
-
     db = SessionLocal()
     try:
+        # Fail fast before asking for any identity or password data when the
+        # installation has already been bootstrapped.
+        _ensure_bootstrap_available(db)
+
+        nome = _prompt_required("Nome")
+        sobrenome = _prompt_required("Sobrenome")
+        email = args.email.strip() if args.email else _prompt_required("Email")
+        data_nascimento = _parse_birth_date(_prompt_required("Data de nascimento (YYYY-MM-DD)"))
+        senha = _prompt_password()
+
         admin = create_first_admin(
             db,
             nome=nome,
