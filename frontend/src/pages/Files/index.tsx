@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/Button";
-import Card from "@/components/Card";
+import { Card } from "@/components/Card";
 import { Modal } from "@/design-system/components/Modal";
 import { api, catchCustom } from "@/services/api";
 import { apiConfig } from "@/services/api/apiConfig";
