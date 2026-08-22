@@ -19,7 +19,9 @@ const alertStyles = tv({
   defaultVariants: { tone: "info" },
 });
 
-const toneIcons: Record<NonNullable<VariantProps<typeof alertStyles>["tone"]>, SystemIconName> = {
+type AlertTone = "info" | "success" | "warning" | "danger";
+
+const toneIcons: Record<AlertTone, SystemIconName> = {
   info: "info",
   success: "success",
   warning: "warning",
@@ -31,16 +33,17 @@ type AlertProps = Omit<ComponentProps<"div">, "title"> &
     title?: ReactNode;
   };
 
-export function Alert({ tone = "info", title, children, className, ...props }: AlertProps) {
-  const { root, content, title: titleStyle } = alertStyles({ tone });
+export function Alert({ tone, title, children, className, ...props }: AlertProps) {
+  const resolvedTone: AlertTone = tone ?? "info";
+  const { root, content, title: titleStyle } = alertStyles({ tone: resolvedTone });
 
   return (
     <div
-      role={tone === "danger" ? "alert" : "status"}
+      role={resolvedTone === "danger" ? "alert" : "status"}
       className={root({ className })}
       {...props}
     >
-      <Icon name={toneIcons[tone]} className="mt-0.5 shrink-0" />
+      <Icon name={toneIcons[resolvedTone]} className="mt-0.5 shrink-0" />
       <div className={content()}>
         {title && <div className={titleStyle()}>{title}</div>}
         <div>{children}</div>

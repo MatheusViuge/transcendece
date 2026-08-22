@@ -1,15 +1,13 @@
-import simbolo from "@/assets/simbolo_black.svg";
+import { BrandLogo } from "@/brand";
 
 export function LoginHeader() {
   return (
-    <div className="text-center flex flex-col gap-2">
-      <div className="flex justify-center mb-4">
-        <img src={simbolo} alt="Logo" className="h-12 w-auto" />
+    <div className="flex flex-col gap-2 text-center">
+      <div className="mb-4 flex justify-center">
+        <BrandLogo compact className="h-12 w-auto" />
       </div>
-      <h2 className="text-lg leading-6 black-text">Bem vindo(a) de volta!</h2>
-      <p className="text">
-        Entre para continuar aprendendo!
-      </p>
+      <h2 className="black-text text-lg leading-6">Bem vindo(a) de volta!</h2>
+      <p className="text">Entre para continuar aprendendo!</p>
     </div>
   );
 }
