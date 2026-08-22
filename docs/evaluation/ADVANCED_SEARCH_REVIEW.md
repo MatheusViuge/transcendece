@@ -4,28 +4,53 @@ Parent Epic: #25
 
 ## Automated
 
-- [ ] `npm run lint` passes
-- [ ] `npm run build` passes
+- [ ] backend regression passes
+- [ ] `tests/test_advanced_search.py` passes
+- [ ] `tests/test_seed_advanced_search.py` passes
+- [ ] frontend lint passes
+- [ ] frontend production build passes
 - [ ] `sh scripts/search-check.sh` passes
-- [ ] backend regression passes, including `tests/test_advanced_search.py`
-- [ ] combined filters + sorting + pagination test passes
-- [ ] invalid search parameters return 422
-- [ ] HTTPS deployment serves `/api/search/courses`
-- [ ] Framework/ORM, Design System and PWA regressions remain green
+- [ ] Docker images build in the serial backend → frontend → proxy order
+- [ ] PostgreSQL becomes healthy and Alembic is at the single head
+- [ ] manual Advanced Search seed runs twice on PostgreSQL without duplicate seed records
+- [ ] exactly 30 seed courses and 12 seed users remain after the second run
+- [ ] `/explorar` is served through HTTPS
+- [ ] `/api/search/courses` is available through HTTPS/Nginx
+- [ ] seeded `100%` course is searchable through HTTPS
+- [ ] invalid `sort` returns HTTP 422 through HTTPS
 
-## Manual browser review
+## Manual setup
 
-- [ ] `/explorar` loads persisted results without console errors
-- [ ] text search works with normal, accented and special-character input
-- [ ] category, level, instructor and price filters can be combined
-- [ ] sorting field and direction change result order
-- [ ] pagination preserves the active search state
-- [ ] empty result state is clear
-- [ ] loading/error states are understandable
-- [ ] copied URL reproduces the same search state in another tab
-- [ ] refresh preserves the same state
-- [ ] Back/Forward restores previous search states
-- [ ] mobile and keyboard navigation remain usable
+From the repository root with the production stack running:
+
+```bash
+docker compose exec backend python -m scripts.seed_advanced_search
+```
+
+All seed users use password `SearchSeed42!`.
+
+## Manual UX review
+
+- [ ] `/explorar` shows the populated catalog and more than one page
+- [ ] searching `Python` returns matching persisted courses
+- [ ] searching `100%` returns `APIs REST 100% Práticas`
+- [ ] searching an instructor name returns that instructor's courses
+- [ ] category filter works alone
+- [ ] level filter works alone
+- [ ] instructor filter works alone
+- [ ] free/paid filter works alone
+- [ ] multiple filters work together
+- [ ] title sorting works asc/desc
+- [ ] price sorting works asc/desc
+- [ ] rating sorting works asc/desc, including courses with rating 0
+- [ ] newest sorting changes the deterministic seeded creation-date order
+- [ ] moving between pages preserves active filters
+- [ ] refresh preserves state/results from the URL
+- [ ] copied URL reproduces the same state in another tab
+- [ ] browser Back/Forward restores previous search states
+- [ ] loading/no-results/error states remain understandable
+- [ ] Network shows `/api/search/courses`, not a full-catalog client-side filter
+- [ ] console has no relevant application errors/warnings
 
 ## Module gate
 
