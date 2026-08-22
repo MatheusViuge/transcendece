@@ -8,6 +8,7 @@ from app.routers import (
     evaluation,
     instructor,
     level,
+    search,
 )
 
 api_router = APIRouter()
@@ -16,6 +17,7 @@ for router in (
     auth.router,
     category.router,
     level.router,
+    search.router,
     course.router,
     instructor.router,
     evaluation.router,
