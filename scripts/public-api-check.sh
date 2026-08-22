@@ -14,6 +14,8 @@ for file in "$MODEL" "$AUTH" "$ROUTER" "$KEY_ROUTER" "$MIGRATION" "$DOCS"; do
 done
 
 grep -q 'prefix="/v1/public"' "$ROUTER"
+grep -q 'prefix="/keys"' "$KEY_ROUTER"
+grep -q 'https://localhost/api/keys' "$DOCS"
 grep -q 'APIKeyHeader' "$AUTH"
 grep -q 'name="X-API-Key"' "$AUTH"
 grep -q 'with_for_update' "$AUTH"
