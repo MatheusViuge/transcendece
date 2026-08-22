@@ -11,6 +11,7 @@ from fastapi import Depends, HTTPException, Security, status
 from fastapi.security import APIKeyHeader
 from sqlalchemy.orm import Session
 
+from app.core.security import ALLOWED_ROLES
 from app.database import get_db
 from app.models.api_key import ApiKey
 from app.models.user import Usuario
@@ -87,7 +88,7 @@ def authenticate_api_key(
         raise _auth_error()
 
     owner = db.query(Usuario).filter(Usuario.id == api_key.owner_id).first()
-    if owner is None:
+    if owner is None or not owner.is_active or owner.tipo_usuario not in ALLOWED_ROLES:
         db.rollback()
         raise _auth_error()
 

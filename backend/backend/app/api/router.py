@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 
 from app.routers import (
+    admin,
     api_keys,
     auth,
     category,
@@ -17,6 +18,7 @@ api_router = APIRouter()
 
 for router in (
     auth.router,
+    admin.router,
     api_keys.router,
     category.router,
     level.router,

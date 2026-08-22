@@ -1,5 +1,5 @@
 import { api, catchCustom } from "@/services/api";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { UserContext, type IUserStorage } from "./userContextDefinition";
 
 type LoginResponse = {
@@ -11,7 +11,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<IUserStorage | null>(null);
     const [loading, setLoading] = useState(true);
 
-    const authMe = async () => {
+    const authMe = useCallback(async () => {
         setLoading(true);
 
         try {
@@ -24,7 +24,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
     useEffect(() => {
         const token = localStorage.getItem("token");
@@ -37,7 +37,17 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         void authMe().catch((error) => {
             catchCustom(error);
         });
-    }, []);
+    }, [authMe]);
+
+    useEffect(() => {
+        const refreshOnFocus = () => {
+            if (!localStorage.getItem("token")) return;
+            void authMe().catch(() => undefined);
+        };
+
+        window.addEventListener("focus", refreshOnFocus);
+        return () => window.removeEventListener("focus", refreshOnFocus);
+    }, [authMe]);
 
     const login = async (body: { email: string; senha: string }) => {
         setLoading(true);
@@ -71,7 +81,16 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     };
 
     return (
-        <UserContext.Provider value={{ user, login, logout, loading, isAuthenticated: Boolean(user) }}>
+        <UserContext.Provider
+            value={{
+                user,
+                login,
+                logout,
+                refreshUser: authMe,
+                loading,
+                isAuthenticated: Boolean(user),
+            }}
+        >
             {children}
         </UserContext.Provider>
     );

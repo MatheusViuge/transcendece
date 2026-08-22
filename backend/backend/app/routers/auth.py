@@ -35,6 +35,7 @@ def registra_usuario(usuario: UsuarioCriar, db: Session = Depends(get_db)):
         email=email,
         senha_hash=get_password_hash(usuario.senha_hash),
         tipo_usuario="aluno",
+        is_active=True,
         data_nascimento=usuario.data_nascimento,
     )
 
@@ -54,7 +55,7 @@ def listar_usuarios(
     db: Session = Depends(get_db),
     require=Depends(allowed_roles("admin")),
 ):
-    """Retorna usuários cadastrados para administradores."""
+    """Legacy endpoint; o CRUD completo vive em `/admin/users`."""
     del require
     usuarios = db.query(Usuario).all()
 
@@ -67,7 +68,7 @@ def listar_usuarios(
 @router.post("/login", response_model=TokenResponse)
 def login(data: UsuarioLogin, db: Session = Depends(get_db)):
     """Autentica por email/senha e emite JWT somente após verificação do hash."""
-    email = str(data.email).lower()
+    email = str(data.email).strip().lower()
     user = db.query(Usuario).filter(Usuario.email == email).first()
 
     if not user or not verify_password(data.senha, user.senha_hash):
@@ -75,6 +76,12 @@ def login(data: UsuarioLogin, db: Session = Depends(get_db)):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Credenciais inválidas.",
             headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Conta desativada.",
         )
 
     user.ultimo_login = datetime.now(timezone.utc)

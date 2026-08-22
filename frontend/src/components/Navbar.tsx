@@ -3,6 +3,7 @@ import { tv } from "tailwind-variants";
 import { BrandLogo } from "@/brand";
 import { Button } from "./Button";
 import { useUser } from "@/hooks/useUser";
+import { ROLE_NAV_LINKS } from "@/routes/access";
 
 const styles = tv({
     slots: {
@@ -12,28 +13,9 @@ const styles = tv({
 
 const { navbar } = styles();
 
-type Role = "aluno" | "instrutor" | "admin";
-
-const links: Record<Role, Array<{ label: string; to: string }>> = {
-    aluno: [
-        { label: "Explorar", to: "/aluno/explorar" },
-        { label: "Atividades", to: "/aluno/atividades" },
-    ],
-    instrutor: [
-        { label: "Meus Cursos", to: "/instrutor/meus-cursos" },
-        { label: "Correções", to: "/instrutor/correcoes" },
-    ],
-    admin: [
-        { label: "Usuários", to: "/admin/usuarios" },
-        { label: "Cursos", to: "/admin/cursos" },
-    ],
-};
-
 export default function Navbar() {
     const { user, isAuthenticated } = useUser();
-    const roleLinks = user?.tipo_usuario && user.tipo_usuario in links
-        ? links[user.tipo_usuario as Role]
-        : [];
+    const roleLinks = user ? ROLE_NAV_LINKS[user.tipo_usuario] : [];
 
     return (
         <nav className={navbar()} aria-label="Navegação principal">

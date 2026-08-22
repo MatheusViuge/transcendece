@@ -63,6 +63,8 @@ jobs:
         run: pytest
       - name: Public API structural and security check
         run: sh ../../scripts/public-api-check.sh
+      - name: RBAC structural and security check
+        run: sh ../../scripts/rbac-check.sh
 
   deployment:
     name: Compose HTTPS and clean-install smoke
@@ -150,6 +152,27 @@ jobs:
           finally:
               db.close()
           PY
+      - name: Verify RBAC seed population on PostgreSQL
+        shell: bash
+        run: |
+          docker compose exec -T backend python -m scripts.seed_rbac
+          docker compose exec -T backend python -m scripts.seed_rbac
+          docker compose exec -T backend python - <<'PY'
+          from app.database import SessionLocal
+          from app.models.user import Usuario
+          from scripts.seed_rbac import RBAC_ADMIN_EMAIL
+
+          db = SessionLocal()
+          try:
+              admins = db.query(Usuario).filter(
+                  Usuario.email == RBAC_ADMIN_EMAIL,
+                  Usuario.tipo_usuario == "admin",
+                  Usuario.is_active.is_(True),
+              ).count()
+              assert admins == 1, admins
+          finally:
+              db.close()
+          PY
       - name: Start frontend and HTTPS proxy
         run: docker compose up -d frontend proxy
       - name: Wait for HTTPS health endpoint
@@ -179,6 +202,7 @@ jobs:
           curl --silent --show-error --fail --insecure https://localhost/privacidade >/dev/null
           curl --silent --show-error --fail --insecure https://localhost/termos >/dev/null
           curl --silent --show-error --fail --insecure https://localhost/design-system >/dev/null
+          curl --silent --show-error --fail --insecure https://localhost/admin/usuarios >/dev/null
       - name: Verify PWA assets through HTTPS
         shell: bash
         run: |
@@ -223,6 +247,8 @@ jobs:
           test "$invalid_status" = "422"
       - name: Verify Public API through HTTPS
         run: sh scripts/public-api-smoke.sh
+      - name: Verify RBAC through HTTPS
+        run: sh scripts/rbac-smoke.sh
       - name: Verify Framework and ORM module integration
         run: sh scripts/framework-orm-smoke.sh
       - name: Verify internal ports are not public
@@ -269,4 +295,4 @@ jobs:
       - name: Print Git author summary for human review
         run: git shortlog -sne --all
       - name: Confirm automated mandatory checks
-        run: echo 'Frontend, backend, deployment, Framework/ORM, Design System, PWA, Advanced Search, Public API and secret-file checks passed.'
+        run: echo 'Frontend, backend, deployment, Framework/ORM, Design System, PWA, Advanced Search, Public API, RBAC and secret-file checks passed.'
