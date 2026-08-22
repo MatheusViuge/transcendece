@@ -11,7 +11,7 @@ TOKEN=$(python -c 'import json; print(json.load(open("/tmp/public-api-login.json
 
 $CURL --fail -X POST -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
   -d '{"name":"ci-public-api","scopes":["courses:read","courses:write"]}' \
-  "$BASE_URL/api-keys" > /tmp/public-api-key.json
+  "$BASE_URL/keys" > /tmp/public-api-key.json
 API_KEY=$(python -c 'import json; print(json.load(open("/tmp/public-api-key.json"))["data"]["secret"])')
 KEY_ID=$(python -c 'import json; print(json.load(open("/tmp/public-api-key.json"))["data"]["id"])')
 
@@ -45,7 +45,7 @@ test "$deleted" = "204"
 
 $CURL --fail -X POST -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
   -d '{"name":"ci-rate-limit","scopes":["courses:read"]}' \
-  "$BASE_URL/api-keys" > /tmp/public-api-rate-key.json
+  "$BASE_URL/keys" > /tmp/public-api-rate-key.json
 RATE_KEY=$(python -c 'import json; print(json.load(open("/tmp/public-api-rate-key.json"))["data"]["secret"])')
 for _ in $(seq 1 20); do
   code=$($CURL --output /dev/null --write-out '%{http_code}' -H "X-API-Key: $RATE_KEY" "$BASE_URL/v1/public/courses?page_size=1")
@@ -54,7 +54,7 @@ done
 limited=$($CURL --output /dev/null --write-out '%{http_code}' -H "X-API-Key: $RATE_KEY" "$BASE_URL/v1/public/courses?page_size=1")
 test "$limited" = "429"
 
-$CURL --fail -X DELETE -H "Authorization: Bearer $TOKEN" "$BASE_URL/api-keys/$KEY_ID" >/dev/null
+$CURL --fail -X DELETE -H "Authorization: Bearer $TOKEN" "$BASE_URL/keys/$KEY_ID" >/dev/null
 revoked=$($CURL --output /dev/null --write-out '%{http_code}' -H "X-API-Key: $API_KEY" "$BASE_URL/v1/public/courses")
 test "$revoked" = "401"
 
