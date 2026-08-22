@@ -5,6 +5,7 @@ import pytest
 from app.database import SessionLocal
 from app.models.user import Usuario
 from app.services.auth_service import verify_password
+from scripts import create_admin as create_admin_script
 from scripts.create_admin import BootstrapError, create_first_admin
 
 
@@ -130,4 +131,38 @@ def test_bootstrap_never_promotes_an_existing_non_admin_account():
             user.tipo_usuario = role
         db.commit()
     finally:
+        db.close()
+
+
+def test_main_refuses_before_prompting_when_admin_exists(monkeypatch):
+    db = SessionLocal()
+    marker_email = "preflight.bootstrap.admin@example.com"
+    _cleanup(marker_email)
+    try:
+        existing = Usuario(
+            nome="Preflight",
+            sobrenome="Admin",
+            email=marker_email,
+            senha_hash="not-used",
+            data_nascimento=date(1990, 1, 1),
+            tipo_usuario="admin",
+            is_active=True,
+        )
+        db.add(existing)
+        db.commit()
+
+        def fail_prompt(*_args, **_kwargs):
+            pytest.fail("bootstrap prompts must not run when an admin already exists")
+
+        monkeypatch.setattr(create_admin_script, "_prompt_required", fail_prompt)
+        monkeypatch.setattr(create_admin_script, "_prompt_password", fail_prompt)
+        monkeypatch.setattr("sys.argv", ["create_admin"])
+
+        with pytest.raises(SystemExit, match="Já existe uma conta admin"):
+            create_admin_script.main()
+    finally:
+        existing = db.query(Usuario).filter(Usuario.email == marker_email).first()
+        if existing is not None:
+            db.delete(existing)
+            db.commit()
         db.close()
