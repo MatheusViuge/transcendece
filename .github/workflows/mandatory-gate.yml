@@ -65,6 +65,8 @@ jobs:
         run: sh ../../scripts/public-api-check.sh
       - name: RBAC structural and security check
         run: sh ../../scripts/rbac-check.sh
+      - name: File Upload structural and security check
+        run: sh ../../scripts/file-upload-check.sh
 
   deployment:
     name: Compose HTTPS and clean-install smoke
@@ -203,6 +205,7 @@ jobs:
           curl --silent --show-error --fail --insecure https://localhost/termos >/dev/null
           curl --silent --show-error --fail --insecure https://localhost/design-system >/dev/null
           curl --silent --show-error --fail --insecure https://localhost/admin/usuarios >/dev/null
+          curl --silent --show-error --fail --insecure https://localhost/aluno/arquivos >/dev/null
       - name: Verify PWA assets through HTTPS
         shell: bash
         run: |
@@ -225,7 +228,6 @@ jobs:
             -o /tmp/search.json
           python - <<'PY'
           import json
-
           with open('/tmp/search.json', encoding='utf-8') as handle:
               data = json.load(handle)['data']
           assert data['pagination']['total'] == 30, data['pagination']
@@ -237,7 +239,6 @@ jobs:
             -o /tmp/search-percent.json
           python - <<'PY'
           import json
-
           with open('/tmp/search-percent.json', encoding='utf-8') as handle:
               items = json.load(handle)['data']['items']
           assert [item['titulo'] for item in items] == ['APIs REST 100% Práticas'], items
@@ -249,6 +250,8 @@ jobs:
         run: sh scripts/public-api-smoke.sh
       - name: Verify RBAC through HTTPS
         run: sh scripts/rbac-smoke.sh
+      - name: Verify File Upload through HTTPS and restart
+        run: sh scripts/file-upload-smoke.sh
       - name: Verify Framework and ORM module integration
         run: sh scripts/framework-orm-smoke.sh
       - name: Verify internal ports are not public
@@ -295,4 +298,4 @@ jobs:
       - name: Print Git author summary for human review
         run: git shortlog -sne --all
       - name: Confirm automated mandatory checks
-        run: echo 'Frontend, backend, deployment, Framework/ORM, Design System, PWA, Advanced Search, Public API, RBAC and secret-file checks passed.'
+        run: echo 'Frontend, backend, deployment, Framework/ORM, Design System, PWA, Advanced Search, Public API, RBAC, File Upload and secret-file checks passed.'
