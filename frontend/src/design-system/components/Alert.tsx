@@ -1,6 +1,7 @@
 import type { ComponentProps, ReactNode } from "react";
 import { tv, type VariantProps } from "tailwind-variants";
-import { Icon, type SystemIconName } from "../icons";
+import { Icon } from "../icons";
+import type { SystemIconName } from "../iconRegistry";
 
 const alertStyles = tv({
   slots: {

@@ -1,4 +1,5 @@
 export * from "./components";
-export { Icon, systemIcons } from "./icons";
-export type { SystemIconName } from "./icons";
+export { Icon } from "./icons";
+export { systemIcons } from "./iconRegistry";
+export type { SystemIconName } from "./iconRegistry";
 export { designTokens } from "./tokens";
