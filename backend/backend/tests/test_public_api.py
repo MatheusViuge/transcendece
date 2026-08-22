@@ -5,6 +5,7 @@ from scripts.seed_advanced_search import SEED_PASSWORD, populate
 
 ANA = "ana.ribeiro@seed.example.com"
 BRUNO = "bruno.costa@seed.example.com"
+KEYS_PATH = "/keys"
 
 
 def _seed() -> None:
@@ -23,7 +24,7 @@ def _login(client, email: str) -> str:
 
 def _create_key(client, token: str, *, name: str, scopes: list[str]) -> dict:
     response = client.post(
-        "/api-keys",
+        KEYS_PATH,
         headers={"Authorization": f"Bearer {token}"},
         json={"name": name, "scopes": scopes},
     )
@@ -56,7 +57,7 @@ def test_api_key_lifecycle_never_persists_or_reveals_plain_secret(client):
     finally:
         db.close()
 
-    listed = client.get("/api-keys", headers={"Authorization": f"Bearer {token}"})
+    listed = client.get(KEYS_PATH, headers={"Authorization": f"Bearer {token}"})
     assert listed.status_code == 200
     assert "secret" not in listed.text
     assert "key_hash" not in listed.text
@@ -66,7 +67,7 @@ def test_api_key_lifecycle_never_persists_or_reveals_plain_secret(client):
     assert working.headers["X-RateLimit-Limit"] == str(PUBLIC_API_RATE_LIMIT)
 
     rotated = client.post(
-        f"/api-keys/{created['id']}/rotate",
+        f"{KEYS_PATH}/{created['id']}/rotate",
         headers={"Authorization": f"Bearer {token}"},
     )
     assert rotated.status_code == 201, rotated.text
@@ -79,7 +80,7 @@ def test_api_key_lifecycle_never_persists_or_reveals_plain_secret(client):
     ).status_code == 200
 
     revoked = client.delete(
-        f"/api-keys/{replacement['id']}",
+        f"{KEYS_PATH}/{replacement['id']}",
         headers={"Authorization": f"Bearer {token}"},
     )
     assert revoked.status_code == 200
@@ -193,7 +194,7 @@ def test_non_instructor_cannot_issue_write_key_and_invalid_payload_is_rejected(c
     _seed()
     student_token = _login(client, "alice.ferreira@seed.example.com")
     forbidden = client.post(
-        "/api-keys",
+        KEYS_PATH,
         headers={"Authorization": f"Bearer {student_token}"},
         json={"name": "student-write", "scopes": ["courses:read", "courses:write"]},
     )
