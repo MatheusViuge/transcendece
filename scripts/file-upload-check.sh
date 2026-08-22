@@ -1,0 +1,49 @@
+#!/bin/sh
+set -eu
+
+ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+MODEL="$ROOT/backend/backend/app/models/uploaded_file.py"
+SERVICE="$ROOT/backend/backend/app/services/file_storage.py"
+ROUTER="$ROOT/backend/backend/app/routers/files.py"
+MIGRATION="$ROOT/backend/backend/alembic/versions_v2/0004_file_upload.py"
+TESTS="$ROOT/backend/backend/tests/test_file_upload.py"
+UI="$ROOT/frontend/src/pages/Files/index.tsx"
+ROUTES="$ROOT/frontend/src/routes/AppRoutes.tsx"
+COMPOSE="$ROOT/docker-compose.yml"
+NGINX="$ROOT/infra/nginx/nginx.conf"
+DOCS="$ROOT/docs/evaluation/FILE_UPLOAD.md"
+
+for file in "$MODEL" "$SERVICE" "$ROUTER" "$MIGRATION" "$TESTS" "$UI" "$ROUTES" "$COMPOSE" "$NGINX" "$DOCS"; do
+  test -f "$file"
+done
+
+grep -q 'down_revision = "0003_rbac_user_state"' "$MIGRATION"
+grep -q 'owner_id' "$MODEL"
+grep -q 'storage_name' "$MODEL"
+grep -q 'uuid.uuid4' "$SERVICE"
+grep -q 'sha256' "$SERVICE"
+grep -q 'image/png' "$SERVICE"
+grep -q 'image/jpeg' "$SERVICE"
+grep -q 'image/webp' "$SERVICE"
+grep -q 'application/pdf' "$SERVICE"
+grep -q 'text/plain' "$SERVICE"
+grep -q '_validate_signature' "$SERVICE"
+grep -q 'HTTP_413_REQUEST_ENTITY_TOO_LARGE' "$SERVICE"
+grep -q '@router.post' "$ROUTER"
+grep -q '@router.get("/{file_id}/content")' "$ROUTER"
+grep -q '@router.delete' "$ROUTER"
+grep -q 'user\["role"\] != "admin"' "$ROUTER"
+grep -q 'onUploadProgress' "$UI"
+grep -q '<progress' "$UI"
+grep -q 'Visualizar' "$UI"
+grep -q 'Baixar' "$UI"
+grep -q 'Excluir' "$UI"
+grep -q 'path="arquivos"' "$ROUTES"
+grep -q 'file_storage:/app/storage/uploads' "$COMPOSE"
+grep -q 'client_max_body_size 13m' "$NGINX"
+
+# Unsafe active document types must not be part of the allowlist.
+! grep -q 'text/html.*FilePolicy' "$SERVICE"
+! grep -q 'image/svg+xml.*FilePolicy' "$SERVICE"
+
+echo "File Upload structural/security check passed."
