@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import '@/assets/index.css'
 import App from '@/App.tsx'
 import { UserProvider } from '@/Context/UserContext.tsx'
+import { registerServiceWorker } from '@/pwa/registerServiceWorker'
 
 createRoot(document.getElementById('root')!).render(
     <StrictMode>
@@ -11,3 +12,5 @@ createRoot(document.getElementById('root')!).render(
         </UserProvider>
     </StrictMode>,
 )
+
+registerServiceWorker()
