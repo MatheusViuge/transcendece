@@ -1,5 +1,5 @@
 from sqlalchemy import (
-    Column, Integer, String,
+    Boolean, CheckConstraint, Column, Integer, String,
     DateTime, Date
 )
 from sqlalchemy.orm import relationship
@@ -17,6 +17,12 @@ class Usuario(Base):
     """
     # NOME DA TABELA
     __tablename__ = "usuarios"
+    __table_args__ = (
+        CheckConstraint(
+            "tipo_usuario IN ('aluno', 'instrutor', 'admin')",
+            name="ck_usuarios_tipo_usuario",
+        ),
+    )
 
     # COLUNAS
     # Informações básicas do usuário
@@ -32,8 +38,9 @@ class Usuario(Base):
     email = Column(String(100), nullable=False, unique=True)
     senha_hash = Column(String(255), nullable=False)
 
-    # Perfil do usuário
-    tipo_usuario =  Column(String(20), nullable=False, default="aluno")
+    # Perfil/autorização do usuário
+    tipo_usuario = Column(String(20), nullable=False, default="aluno")
+    is_active = Column(Boolean, nullable=False, default=True, server_default="true")
 
     # CONTROLE DE DATA/HISTÓRICO
     # data de criação do registro do usuário
