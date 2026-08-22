@@ -51,6 +51,29 @@ Backend endpoints under `/admin` are permission-protected:
 
 Frontend route `/admin/usuarios` provides the demonstrable admin panel with search/filtering, pagination, create/edit, role changes and activation state.
 
+## Production first-admin bootstrap
+
+Public registration intentionally always creates `aluno`, so a fresh production installation needs one out-of-band bootstrap step before the RBAC admin surface can be used.
+
+Run inside the backend container:
+
+```bash
+docker compose exec backend python -m scripts.create_admin
+```
+
+The command asks for name, surname, email, birth date, password and password confirmation. Password input uses `getpass`, so it is not echoed to the terminal and no production credential is hardcoded in the repository.
+
+Bootstrap safety rules:
+
+- the command works only while no `admin` record exists;
+- inactive admin records still count, preventing silent creation of a second bootstrap admin;
+- an email already owned by any account is rejected instead of silently promoting that account;
+- the same `AdminUserCreate` validation rules are reused for email, password strength and birth date;
+- the password is persisted only through the application's password hashing function;
+- after the first admin exists, additional admins must be managed through `/admin/usuarios` / `/admin/users`.
+
+The deterministic `python -m scripts.seed_rbac` command remains development/evaluation-only and is not the production bootstrap mechanism.
+
 ## Privilege-escalation protections
 
 - public registration always creates `aluno`;
@@ -77,7 +100,9 @@ Frontend route `/admin/usuarios` provides the demonstrable admin panel with sear
 - central authorization in `app/core/security.py` and `app/core/rbac.py`;
 - admin service/router in `app/services/admin_user_service.py` and `app/routers/admin.py`;
 - authorization regression `tests/test_rbac.py`;
-- deterministic manual seed `python -m scripts.seed_rbac`;
+- production first-admin bootstrap `python -m scripts.create_admin`;
+- bootstrap regression `tests/test_create_admin.py`;
+- deterministic development/evaluation seed `python -m scripts.seed_rbac`;
 - frontend role map in `frontend/src/routes/access.ts`;
 - explicit 403 UX in `frontend/src/pages/Forbidden.tsx`;
 - admin panel in `frontend/src/pages/Admin/Users.tsx`;
