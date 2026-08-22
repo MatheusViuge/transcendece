@@ -6,12 +6,17 @@ import { Modal } from "@/design-system/components/Modal";
 import { api, catchCustom } from "@/services/api";
 import { apiConfig } from "@/services/api/apiConfig";
 
-const FILE_POLICIES: Record<string, number> = {
-    "image/png": 8 * 1024 * 1024,
-    "image/jpeg": 8 * 1024 * 1024,
-    "image/webp": 8 * 1024 * 1024,
-    "application/pdf": 12 * 1024 * 1024,
-    "text/plain": 2 * 1024 * 1024,
+type FilePolicy = {
+    extensions: string[];
+    maxBytes: number;
+};
+
+const FILE_POLICIES: Record<string, FilePolicy> = {
+    "image/png": { extensions: [".png"], maxBytes: 8 * 1024 * 1024 },
+    "image/jpeg": { extensions: [".jpg", ".jpeg"], maxBytes: 8 * 1024 * 1024 },
+    "image/webp": { extensions: [".webp"], maxBytes: 8 * 1024 * 1024 },
+    "application/pdf": { extensions: [".pdf"], maxBytes: 12 * 1024 * 1024 },
+    "text/plain": { extensions: [".txt"], maxBytes: 2 * 1024 * 1024 },
 };
 
 const ACCEPT = ".png,.jpg,.jpeg,.webp,.pdf,.txt";
@@ -40,11 +45,24 @@ function prettySize(bytes: number) {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function fileExtension(name: string) {
+    const index = name.lastIndexOf(".");
+    return index >= 0 ? name.slice(index).toLowerCase() : "";
+}
+
 function validateFile(file: File): string | null {
-    const limit = FILE_POLICIES[file.type];
-    if (!limit) return "Tipo não suportado. Use PNG, JPEG, WebP, PDF ou TXT.";
+    const policy = FILE_POLICIES[file.type];
+    if (!policy) return "Tipo não suportado. Use PNG, JPEG, WebP, PDF ou TXT.";
+
+    const extension = fileExtension(file.name);
+    if (!policy.extensions.includes(extension)) {
+        return "A extensão do arquivo não corresponde ao tipo detectado pelo navegador.";
+    }
+
     if (file.size === 0) return "Arquivo vazio não é permitido.";
-    if (file.size > limit) return `Arquivo excede o limite de ${Math.floor(limit / 1024 / 1024)} MB.`;
+    if (file.size > policy.maxBytes) {
+        return `Arquivo excede o limite de ${Math.floor(policy.maxBytes / 1024 / 1024)} MB.`;
+    }
     return null;
 }
 
@@ -111,10 +129,13 @@ export default function Files() {
         setProgress(0);
         try {
             const form = new FormData();
-            form.append("file", selected);
+            form.append("file", selected, selected.name);
             form.append("purpose", "manual-test");
+
+            // Do not set Content-Type here. Axios/the browser must add the
+            // multipart boundary; forcing the header produces malformed
+            // requests in real browsers even though curl-based smoke tests pass.
             await apiConfig().post("/files", form, {
-                headers: { "Content-Type": "multipart/form-data" },
                 onUploadProgress: (event) => {
                     if (!event.total) return;
                     setProgress(Math.min(100, Math.round((event.loaded * 100) / event.total)));
