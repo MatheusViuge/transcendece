@@ -1,0 +1,17 @@
+export const designSystemInventory = [
+  { component: "Button", source: "components/Button", usage: "navigation, auth forms and calls to action" },
+  { component: "Input", source: "components/Form/Input", usage: "typed form fields with label/error composition" },
+  { component: "Select", source: "components/Form/Select", usage: "typed option selection in forms" },
+  { component: "Textarea", source: "components/Form/Textarea", usage: "multi-line form content" },
+  { component: "FormField", source: "components/Form/FormField", usage: "shared field layout used by form controls" },
+  { component: "Card", source: "components/Card", usage: "course/content containers and composed card parts" },
+  { component: "Table", source: "components/Table", usage: "reusable data-table rendering" },
+  { component: "Badge", source: "design-system/components/Badge", usage: "status and compact semantic labels" },
+  { component: "Alert", source: "design-system/components/Alert", usage: "semantic feedback and validation messaging" },
+  { component: "Spinner", source: "design-system/components/Spinner", usage: "accessible async/loading feedback" },
+  { component: "EmptyState", source: "design-system/components/EmptyState", usage: "404 and not-yet-implemented screens" },
+  { component: "Modal", source: "design-system/components/Modal", usage: "keyboard-dismissible dialog primitive" },
+  { component: "Pagination", source: "design-system/components/Pagination", usage: "accessible previous/next paging primitive" },
+  { component: "Icon", source: "design-system/icons", usage: "single Lucide/React Icons sizing and ARIA contract" },
+  { component: "BrandLogo", source: "brand/BrandLogo", usage: "responsive brand wordmark/symbol without direct asset imports" },
+] as const;

@@ -2,135 +2,166 @@
 @import "tailwindcss";
 
 @theme {
-  /* breakpoint para telas de celular mais estreitas */
   --breakpoint-xs: 480px;
-
-  /* altura do navbar */
   --spacing-navbar: 4.25rem;
-  
-  /* variaveis de cor (ex: bg-blue-100) */
-  --color-* : initial;
 
-  --color-white: #FFFFFF;
+  --font-sans: "Arimo", ui-sans-serif, system-ui, sans-serif;
+
+  --color-*: initial;
+  --color-white: #ffffff;
   --color-black: #000000;
-  
+
+  /* Semantic foundations */
+  --color-primary: #155dfc;
+  --color-primary-hover: #0f4bd8;
+  --color-primary-soft: #eff6ff;
+  --color-primary-border: #bedbff;
+
+  --color-success: #08783e;
+  --color-success-soft: #ecfdf3;
+  --color-warning: #a15c00;
+  --color-warning-soft: #fff7d6;
+  --color-danger: #c1121f;
+  --color-danger-soft: #fff0f1;
+  --color-info: #155dfc;
+  --color-info-soft: #eff6ff;
+
+  --color-surface: #ffffff;
+  --color-surface-subtle: #f9fafb;
+  --color-surface-muted: #f3f3f5;
+  --color-border: #dedede;
+  --color-border-strong: #99a1af;
+  --color-text: #0a0a0a;
+  --color-text-muted: #4a5565;
+  --color-text-subtle: #717182;
+
+  /* Compatibility aliases used by existing screens. */
   --color-gray: #353535;
-  
-  --color-blue: #155DFC;
-  --color-blue-500: #5B8EFF;
-  --color-blue-300: #BEDBFF;
-  --color-blue-200: #DBEAFE;
-  --color-blue-100: #EFF6FF;
-  
-  --color-grey: #00A63E;
-  --color-grey-100: #F0FDF4;
+  --color-blue: var(--color-primary);
+  --color-blue-500: #5b8eff;
+  --color-blue-300: var(--color-primary-border);
+  --color-blue-200: #dbeafe;
+  --color-blue-100: var(--color-primary-soft);
+  --color-grey: var(--color-success);
+  --color-grey-100: var(--color-success-soft);
+  --color-yellow: #fdc700;
+  --color-yellow-100: var(--color-warning-soft);
+  --color-golden: var(--color-warning);
+  --color-red: var(--color-danger);
 
-  --color-yellow: #FDC700;
-  --color-yellow-100: #fef9c2;
-
-  --color-golden: #D08700;
-
-  --color-red: #E7000B;
-
-  --color-neutral-25: #F9FAFB;
-  --color-neutral-50: #F3F3F5;
-  --color-neutral-100: #E5E7EB;
-  --color-neutral-200: #DEDEDE;
-  --color-neutral-300: #C4C4C4;
-  --color-neutral-400: #99A1AF;
+  --color-neutral-25: #f9fafb;
+  --color-neutral-50: #f3f3f5;
+  --color-neutral-100: #e5e7eb;
+  --color-neutral-200: #dedede;
+  --color-neutral-300: #c4c4c4;
+  --color-neutral-400: #99a1af;
   --color-neutral-500: #717182;
-  --color-neutral-600: #4A5565;
-  --color-neutral-800: #231F20;
-  --color-neutral-900: #0A0A0A;
+  --color-neutral-600: #4a5565;
+  --color-neutral-800: #231f20;
+  --color-neutral-900: #0a0a0a;
   --color-neutral-950: #030213;
-
-  /* cores com transparencia */
-  --color-overlay: #0000001A;
+  --color-overlay: #0000001a;
   --color-transparent: #00000000;
+
+  --radius-control: 0.5rem;
+  --radius-card: 0.75rem;
+  --radius-pill: 9999px;
+
+  --shadow-card: 0 1px 2px rgb(10 10 10 / 0.06), 0 8px 24px rgb(10 10 10 / 0.06);
+  --shadow-dialog: 0 20px 50px rgb(10 10 10 / 0.18);
+}
+
+@layer base {
+  :root {
+    font-family: var(--font-sans);
+    line-height: 1.5;
+    font-weight: 400;
+    color-scheme: light;
+    color: var(--color-text);
+    background-color: var(--color-surface);
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
 }
 
 @layer components {
   .h1 {
-    font-size: 42px;
+    font-size: 2.625rem;
     font-style: normal;
     font-weight: 700;
-    line-height: 42px; /* 100% */
+    line-height: 1;
   }
 
   .text {
-    color: var(--color-neutral-500);
-    font-size: 14px;
+    color: var(--color-text-subtle);
+    font-size: 0.875rem;
     font-style: normal;
     font-weight: 400;
-    line-height: 20px;
+    line-height: 1.25rem;
   }
 
   .black-text {
-    color: var(--color-neutral-900);
-    font-size: 16px;
+    color: var(--color-text);
+    font-size: 1rem;
     font-style: normal;
     font-weight: 400;
-    line-height: 24px; /* 150% */
+    line-height: 1.5rem;
   }
 
   .link {
-    color: var(--color-blue);
-    font-size: 14px;
-    font-style: normal;
+    color: var(--color-primary);
+    font-size: 0.875rem;
     font-weight: 400;
-    line-height: 20px; /* 142.857% */
+    line-height: 1.25rem;
+  }
 
-    &:hover {
-      cursor: pointer;
-      text-decoration-line: underline;
-      text-decoration-style: solid;
-      text-decoration-skip-ink: auto;
-      text-decoration-thickness: auto;
-      text-underline-offset: auto;
-      text-underline-position: from-font;
-    }
+  .link:hover {
+    cursor: pointer;
+    text-decoration: underline;
   }
 
   .link-black {
-    color: var(--color-neutral-600);
+    color: var(--color-text-muted);
     font-weight: 400;
-    font-style: normal;
-    font-size: 16px;
-    line-height: 24px;
-    letter-spacing: 0px;
+    font-size: 1rem;
+    line-height: 1.5rem;
+  }
 
-    &:hover {
-      color: var(--color-black);
-      cursor: pointer;
-    }
+  .link-black:hover {
+    color: var(--color-text);
+    cursor: pointer;
   }
 
   .base-input {
-      @apply bg-neutral-50 text-neutral-900 accent-black py-1 px-3 h-9 w-full rounded-lg cursor-pointer;
-  };
+    @apply bg-surface-muted text-text accent-primary py-1 px-3 min-h-10 w-full rounded-control border border-transparent transition-colors;
+  }
+
+  .base-input:hover {
+    @apply border-border-strong;
+  }
+
+  .base-input:focus-visible {
+    @apply border-primary bg-surface;
+  }
+
+  .base-input:disabled {
+    @apply opacity-60 cursor-not-allowed;
+  }
 
   .placeholder {
-      @apply placeholder:text-sm placeholder:text-neutral-500 placeholder:font-normal;
+    @apply placeholder:text-sm placeholder:text-text-subtle placeholder:font-normal;
   }
 }
 
 @layer utilities {
   .responsive {
-    @apply grid grid-cols-[repeat(auto-fit,minmax(15rem,1fr))] xs:grid-cols-[repeat(auto-fit,minmax(22rem,1fr))]
+    @apply grid grid-cols-[repeat(auto-fit,minmax(15rem,1fr))] xs:grid-cols-[repeat(auto-fit,minmax(22rem,1fr))];
   }
-}
-
-:root {
-  font-family: Arimo, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-
-  color-scheme: light;
-  color: var(--color-black);
-  background-color: var(--color-white);
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
 }

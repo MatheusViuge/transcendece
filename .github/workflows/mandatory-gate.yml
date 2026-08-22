@@ -33,6 +33,8 @@ jobs:
         run: npm run lint
       - name: Production build
         run: npm run build
+      - name: Design System structural check
+        run: sh ../scripts/design-system-check.sh
 
   backend:
     name: Backend mandatory regression
@@ -145,6 +147,7 @@ jobs:
           curl --silent --show-error --fail --insecure https://localhost/login >/dev/null
           curl --silent --show-error --fail --insecure https://localhost/privacidade >/dev/null
           curl --silent --show-error --fail --insecure https://localhost/termos >/dev/null
+          curl --silent --show-error --fail --insecure https://localhost/design-system >/dev/null
       - name: Verify Framework and ORM module integration
         run: sh scripts/framework-orm-smoke.sh
       - name: Verify internal ports are not public
@@ -191,4 +194,4 @@ jobs:
       - name: Print Git author summary for human review
         run: git shortlog -sne --all
       - name: Confirm automated mandatory checks
-        run: echo 'Frontend, backend, deployment, Framework/ORM and secret-file checks passed.'
+        run: echo 'Frontend, backend, deployment, Framework/ORM, Design System and secret-file checks passed.'

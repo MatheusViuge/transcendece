@@ -1,21 +1,21 @@
+import { brandIdentity, BrandLogo } from "@/brand";
 import { Link } from "react-router-dom";
 import { tv } from "tailwind-variants";
-import logoImg from "@/assets/logo_black.svg";
 
 const footer = tv({
     slots: {
-        root: "w-full border-t border-overlay bg-neutral-25 px-4 py-8 xs:px-5",
+        root: "w-full border-t border-border bg-surface-subtle px-4 py-8 xs:px-5",
         container: "mx-auto flex w-full max-w-[1200px] flex-col gap-10 md:gap-12",
         content: "grid min-w-0 grid-cols-1 gap-8 xs:grid-cols-2 md:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))] md:gap-10",
         brand: "flex min-w-0 flex-col gap-4 xs:col-span-2 md:col-span-1",
         logo: "h-8 max-w-full w-auto self-start",
-        description: "max-w-[300px] text-sm leading-5 text-neutral-600",
+        description: "max-w-[300px] text-sm leading-5 text-text-muted",
         column: "flex min-w-0 flex-col gap-4",
-        heading: "text-base leading-6 text-neutral-900",
+        heading: "text-base leading-6 text-text",
         linkList: "flex min-w-0 flex-col gap-2",
         link: "link-black break-words text-sm transition-colors",
-        bottom: "flex items-center justify-center border-t border-overlay pt-8",
-        copyright: "max-w-full text-center text-sm text-neutral-600",
+        bottom: "flex items-center justify-center border-t border-border pt-8",
+        copyright: "max-w-full text-center text-sm text-text-muted",
     },
 });
 
@@ -27,8 +27,8 @@ export default function Footer(): React.ReactElement {
             <div className={container()}>
                 <div className={content()}>
                     <div className={brand()}>
-                        <img className={logo()} alt="Instituto Consuelo Logo" src={logoImg} />
-                        <p className={description()}>Capacitando alunos em todo o mundo com educação de qualidade.</p>
+                        <BrandLogo className={logo()} />
+                        <p className={description()}>{brandIdentity.description}</p>
                     </div>
 
                     <div className={column()}>
@@ -40,7 +40,7 @@ export default function Footer(): React.ReactElement {
                     </div>
 
                     <div className={column()}>
-                        <h3 className={heading()}>Consuelo</h3>
+                        <h3 className={heading()}>{brandIdentity.shortName}</h3>
                         <ul className={linkList()}>
                             <li><Link to="/sobre" className={link()}>Sobre Nós</Link></li>
                             <li><Link to="/contato" className={link()}>Contato</Link></li>
@@ -57,7 +57,7 @@ export default function Footer(): React.ReactElement {
                 </div>
 
                 <div className={bottom()}>
-                    <p className={copyright()}>© 2026 Instituto Consuelo. Todos os direitos reservados.</p>
+                    <p className={copyright()}>{brandIdentity.copyright}</p>
                 </div>
             </div>
         </footer>
