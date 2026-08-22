@@ -14,7 +14,9 @@ from app.services.api_key_service import (
     rotate_api_key,
 )
 
-router = APIRouter(prefix="/api-keys", tags=["API Keys"])
+# Keep the internal path distinct from FastAPI's root_path="/api".  Nginx
+# exposes this router externally as /api/keys while proxying /keys to Uvicorn.
+router = APIRouter(prefix="/keys", tags=["API Keys"])
 
 
 def _owner(db: Session, user_id: int) -> Usuario:
