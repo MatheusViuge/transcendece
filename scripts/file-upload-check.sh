@@ -13,8 +13,9 @@ ROUTES="$ROOT/frontend/src/routes/AppRoutes.tsx"
 COMPOSE="$ROOT/docker-compose.yml"
 NGINX="$ROOT/infra/nginx/nginx.conf"
 DOCS="$ROOT/docs/evaluation/FILE_UPLOAD.md"
+SMOKE="$ROOT/scripts/file-upload-smoke.sh"
 
-for file in "$MODEL" "$SERVICE" "$ROUTER" "$MIGRATION" "$TESTS" "$UI" "$API_CONFIG" "$ROUTES" "$COMPOSE" "$NGINX" "$DOCS"; do
+for file in "$MODEL" "$SERVICE" "$ROUTER" "$MIGRATION" "$TESTS" "$UI" "$API_CONFIG" "$ROUTES" "$COMPOSE" "$NGINX" "$DOCS" "$SMOKE"; do
   test -f "$file"
 done
 
@@ -63,6 +64,14 @@ grep -q 'client_max_body_size 13m' "$NGINX"
 ! grep -q 'FILE_POLICIES\[file\.type\]' "$UI"
 grep -q 'application/octet-stream' "$TESTS"
 grep -q 'generic_wrong_signature' "$TESTS"
+
+# The local smoke must not assume that seed users already exist or pipe a failed
+# HTTP login straight into JSON parsing. Prepare deterministic test accounts and
+# inspect the login HTTP status before attempting to decode the response.
+grep -q 'scripts.seed_advanced_search' "$SMOKE"
+grep -q -- "--write-out '%{http_code}'" "$SMOKE"
+grep -q 'login de %s falhou com HTTP %s' "$SMOKE"
+grep -q 'docker compose -f "$ROOT/docker-compose.yml"' "$SMOKE"
 
 # Unsafe active document types must not be part of the allowlist.
 ! grep -q 'text/html.*FilePolicy' "$SERVICE"
