@@ -22,20 +22,26 @@ Path('/tmp/file-upload-smoke.png').write_bytes(b'\x89PNG\r\n\x1a\nfile-upload-sm
 Path('/tmp/file-upload-fake.jpg').write_bytes(b'\x89PNG\r\n\x1a\nwrong-extension')
 PY
 
+# Reproduce the browser/OS fallback seen in manual review: a valid supported
+# file can arrive with application/octet-stream instead of its canonical MIME.
 curl --silent --show-error --fail --insecure \
   -H "Authorization: Bearer $ALICE_TOKEN" \
   -F 'purpose=ci-smoke' \
-  -F 'file=@/tmp/file-upload-smoke.png;type=image/png' \
+  -F 'file=@/tmp/file-upload-smoke.png;type=application/octet-stream' \
   "$BASE_URL/api/files" -o /tmp/file-upload-created.json
 
-FILE_ID=$(python - <<'PY'
+read -r FILE_ID CONTENT_TYPE <<EOF
+$(python - <<'PY'
 import json
 with open('/tmp/file-upload-created.json', encoding='utf-8') as handle:
-    print(json.load(handle)['data']['id'])
+    data = json.load(handle)['data']
+print(data['id'], data['content_type'])
 PY
 )
+EOF
 
 test -n "$FILE_ID"
+test "$CONTENT_TYPE" = "image/png"
 
 owner_status=$(curl --silent --output /tmp/file-upload-owner.bin --write-out '%{http_code}' --insecure \
   -H "Authorization: Bearer $ALICE_TOKEN" \
@@ -81,4 +87,4 @@ removed_status=$(curl --silent --output /dev/null --write-out '%{http_code}' --i
   "$BASE_URL/api/files/$FILE_ID/content")
 test "$removed_status" = "404"
 
-echo "File Upload external HTTPS persistence/ownership smoke passed."
+echo "File Upload external HTTPS generic-MIME persistence/ownership smoke passed."
