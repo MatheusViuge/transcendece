@@ -31,7 +31,11 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException):
         data=None,
         message=str(exc.detail) if exc.detail else "Erro na requisição.",
     )
-    return JSONResponse(status_code=exc.status_code, content=payload.model_dump())
+    return JSONResponse(
+        status_code=exc.status_code,
+        content=payload.model_dump(),
+        headers=exc.headers,
+    )
 
 
 async def unhandled_exception_handler(request: Request, exc: Exception):
