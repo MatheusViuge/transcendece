@@ -2,7 +2,7 @@
 
 Parent Epic: #25
 
-## Automated — CI #100
+## Automated — CI #102
 
 - [x] backend regression passes
 - [x] `tests/test_advanced_search.py` passes
