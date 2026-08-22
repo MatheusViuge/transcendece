@@ -1,7 +1,7 @@
 import { AxiosError } from "axios";
 import { toast } from "react-toastify";
 import { apiConfig } from "./apiConfig";
-import type { IRequest, IRequestBody } from "./types";
+import type { ApiEnvelope, IRequest, IRequestBody } from "./types";
 
 type ApiErrorPayload = {
     message?: string;
@@ -24,11 +24,11 @@ function dismissLoading(id: ReturnType<typeof toast.loading> | undefined) {
 }
 
 export const api = {
-    get: async ({ url, config, hiddenToast = false }: IRequest) => {
+    get: async <TResponse = unknown>({ url, config, hiddenToast = false }: IRequest): Promise<ApiEnvelope<TResponse>> => {
         const loading = loadingToast(hiddenToast);
 
         try {
-            const response = await apiConfig().get(url, config);
+            const response = await apiConfig().get<ApiEnvelope<TResponse>>(url, config);
             notifySuccess(hiddenToast, response);
             return response.data;
         } finally {
@@ -36,11 +36,11 @@ export const api = {
         }
     },
 
-    post: async <T>({ url, body, config, hiddenToast = false }: IRequestBody<T>) => {
+    post: async <TBody, TResponse = unknown>({ url, body, config, hiddenToast = false }: IRequestBody<TBody>): Promise<ApiEnvelope<TResponse>> => {
         const loading = loadingToast(hiddenToast);
 
         try {
-            const response = await apiConfig().post(url, body, config);
+            const response = await apiConfig().post<ApiEnvelope<TResponse>>(url, body, config);
             notifySuccess(hiddenToast, response);
             return response.data;
         } finally {
@@ -48,11 +48,11 @@ export const api = {
         }
     },
 
-    put: async <T>({ url, body, config, hiddenToast = false }: IRequestBody<T>) => {
+    put: async <TBody, TResponse = unknown>({ url, body, config, hiddenToast = false }: IRequestBody<TBody>): Promise<ApiEnvelope<TResponse>> => {
         const loading = loadingToast(hiddenToast);
 
         try {
-            const response = await apiConfig().put(url, body, config);
+            const response = await apiConfig().put<ApiEnvelope<TResponse>>(url, body, config);
             notifySuccess(hiddenToast, response);
             return response.data;
         } finally {
@@ -60,11 +60,11 @@ export const api = {
         }
     },
 
-    patch: async <T>({ url, body, config, hiddenToast = false }: IRequestBody<T>) => {
+    patch: async <TBody, TResponse = unknown>({ url, body, config, hiddenToast = false }: IRequestBody<TBody>): Promise<ApiEnvelope<TResponse>> => {
         const loading = loadingToast(hiddenToast);
 
         try {
-            const response = await apiConfig().patch(url, body, config);
+            const response = await apiConfig().patch<ApiEnvelope<TResponse>>(url, body, config);
             notifySuccess(hiddenToast, response);
             return response.data;
         } finally {
@@ -72,11 +72,11 @@ export const api = {
         }
     },
 
-    delete: async ({ url, config, hiddenToast = false }: IRequest) => {
+    delete: async <TResponse = unknown>({ url, config, hiddenToast = false }: IRequest): Promise<ApiEnvelope<TResponse>> => {
         const loading = loadingToast(hiddenToast);
 
         try {
-            const response = await apiConfig().delete(url, config);
+            const response = await apiConfig().delete<ApiEnvelope<TResponse>>(url, config);
             notifySuccess(hiddenToast, response);
             return response.data;
         } finally {

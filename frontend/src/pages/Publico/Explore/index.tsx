@@ -25,7 +25,7 @@ export default function Explore() {
   useEffect(() => {
     let active = true;
 
-    api.get({ url: "/courses/", hiddenToast: true })
+    api.get<ICursos[]>({ url: "/courses/", hiddenToast: true })
       .then((response) => {
         if (active) setCursos(response.data);
       })
