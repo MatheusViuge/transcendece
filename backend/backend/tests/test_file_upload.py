@@ -21,7 +21,7 @@ def _login(client, email: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
 
-def _upload(client, headers, name: str, content_type: str, content: bytes):
+def _upload(client, headers, name: str, content_type: str | None, content: bytes):
     return client.post(
         "/files",
         headers=headers,
@@ -62,6 +62,31 @@ def test_multiple_valid_types_upload_list_content_and_delete(client):
     assert client.get(f"/files/{ids[0]}", headers=headers).status_code == 404
 
 
+def test_accepts_generic_browser_mime_but_stores_canonical_type(client):
+    _seed()
+    headers = _login(client, "alice.ferreira@seed.example.com")
+
+    pdf = _upload(
+        client,
+        headers,
+        "relatorio.pdf",
+        "application/octet-stream",
+        b"%PDF-1.7\nvalid browser fallback",
+    )
+    assert pdf.status_code == 201, pdf.text
+    assert pdf.json()["data"]["content_type"] == "application/pdf"
+
+    text = _upload(
+        client,
+        headers,
+        "notas.txt",
+        None,
+        "texto UTF-8 válido çã".encode(),
+    )
+    assert text.status_code == 201, text.text
+    assert text.json()["data"]["content_type"] == "text/plain"
+
+
 def test_rejects_false_extension_signature_unsupported_and_oversized_files_without_garbage(client):
     _seed()
     headers = _login(client, "alice.ferreira@seed.example.com")
@@ -72,7 +97,16 @@ def test_rejects_false_extension_signature_unsupported_and_oversized_files_witho
     wrong_signature = _upload(client, headers, "fake.png", "image/png", b"this is not png")
     assert wrong_signature.status_code == 422
 
-    unsupported = _upload(client, headers, "page.html", "text/html", b"<script>alert(1)</script>")
+    generic_wrong_signature = _upload(
+        client,
+        headers,
+        "fake.pdf",
+        "application/octet-stream",
+        b"this is not a pdf",
+    )
+    assert generic_wrong_signature.status_code == 422
+
+    unsupported = _upload(client, headers, "page.html", "text/html", b"unsupported html")
     assert unsupported.status_code == 415
 
     oversized = _upload(client, headers, "huge.txt", "text/plain", b"a" * (2 * 1024 * 1024 + 1))
