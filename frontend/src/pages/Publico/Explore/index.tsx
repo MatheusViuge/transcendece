@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { useSearchParams } from "react-router-dom";
 
 import { Button } from "@/components/Button";
@@ -186,9 +186,21 @@ export default function Explore() {
     }
   }, [canonicalKey, searchKey, setSearchParams]);
 
-  const updateState = (patch: Partial<SearchState>, replace = false) => {
-    setSearchParams(searchStateToParams({ ...state, ...patch }), { replace });
-  };
+  const updateState = useCallback(
+    (patch: Partial<SearchState>, replace = false) => {
+      setSearchParams(searchStateToParams({ ...state, ...patch }), { replace });
+    },
+    [setSearchParams, state],
+  );
+
+  const handlePageChange = useCallback(
+    (page: number) => updateState({ page }),
+    [updateState],
+  );
+  const handlePageCorrection = useCallback(
+    (page: number) => updateState({ page }, true),
+    [updateState],
+  );
 
   return (
     <main className="grid w-full gap-8 px-4 py-8 sm:px-8 md:grid-cols-[18rem_1fr] lg:px-16">
@@ -209,8 +221,8 @@ export default function Explore() {
         <SearchResults
           key={canonicalKey}
           state={state}
-          onPageChange={(page) => updateState({ page })}
-          onPageCorrection={(page) => updateState({ page }, true)}
+          onPageChange={handlePageChange}
+          onPageCorrection={handlePageCorrection}
           onFacetsReady={setFacets}
         />
       ) : (
