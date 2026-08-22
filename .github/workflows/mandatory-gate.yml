@@ -124,6 +124,30 @@ jobs:
           test "$(grep -c '(head)' /tmp/alembic-heads.txt)" -eq 1
           docker compose exec -T backend alembic current | tee /tmp/alembic-current.txt
           grep -q '(head)' /tmp/alembic-current.txt
+      - name: Verify Advanced Search seed population on PostgreSQL
+        shell: bash
+        run: |
+          docker compose exec -T backend python -m scripts.seed_advanced_search
+          docker compose exec -T backend python -m scripts.seed_advanced_search
+          docker compose exec -T backend python - <<'PY'
+          from app.database import SessionLocal
+          from app.models.course import Curso
+          from app.models.evaluation import AvaliacaoCurso
+          from app.models.user import Usuario
+          from scripts.seed_advanced_search import SEED_EMAIL_SUFFIX, SEED_TAG
+
+          db = SessionLocal()
+          try:
+              courses = db.query(Curso).filter(Curso.descricao.like(f"{SEED_TAG}%")).count()
+              users = db.query(Usuario).filter(Usuario.email.like(f"%{SEED_EMAIL_SUFFIX}")).count()
+              course_ids = [row.id for row in db.query(Curso.id).filter(Curso.descricao.like(f"{SEED_TAG}%")).all()]
+              reviews = db.query(AvaliacaoCurso).filter(AvaliacaoCurso.curso_id.in_(course_ids)).count()
+              assert courses == 30, courses
+              assert users == 12, users
+              assert reviews > 0, reviews
+          finally:
+              db.close()
+          PY
       - name: Start frontend and HTTPS proxy
         run: docker compose up -d frontend proxy
       - name: Wait for HTTPS health endpoint
@@ -173,9 +197,25 @@ jobs:
           curl --silent --show-error --fail --insecure \
             'https://localhost/api/search/courses?sort=title&order=asc&page=1&page_size=5' \
             -o /tmp/search.json
-          grep -q '"items"' /tmp/search.json
-          grep -q '"pagination"' /tmp/search.json
-          grep -q '"facets"' /tmp/search.json
+          python - <<'PY'
+          import json
+
+          with open('/tmp/search.json', encoding='utf-8') as handle:
+              data = json.load(handle)['data']
+          assert data['pagination']['total'] == 30, data['pagination']
+          assert data['pagination']['total_pages'] == 6, data['pagination']
+          assert len(data['facets']['categories']) >= 5
+          PY
+          curl --silent --show-error --fail --insecure \
+            'https://localhost/api/search/courses?q=100%25&page_size=48' \
+            -o /tmp/search-percent.json
+          python - <<'PY'
+          import json
+
+          with open('/tmp/search-percent.json', encoding='utf-8') as handle:
+              items = json.load(handle)['data']['items']
+          assert [item['titulo'] for item in items] == ['APIs REST 100% Práticas'], items
+          PY
           invalid_status=$(curl --silent --output /dev/null --write-out '%{http_code}' --insecure \
             'https://localhost/api/search/courses?sort=invalid')
           test "$invalid_status" = "422"
