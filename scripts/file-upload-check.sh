@@ -29,6 +29,9 @@ grep -q 'image/webp' "$SERVICE"
 grep -q 'application/pdf' "$SERVICE"
 grep -q 'text/plain' "$SERVICE"
 grep -q '_validate_signature' "$SERVICE"
+grep -q '_policy_for_extension' "$SERVICE"
+grep -q 'GENERIC_DECLARED_TYPES' "$SERVICE"
+grep -q 'application/octet-stream' "$SERVICE"
 grep -q 'HTTP_413_REQUEST_ENTITY_TOO_LARGE' "$SERVICE"
 grep -q '@router.post' "$ROUTER"
 grep -q '@router.get("/{file_id}/content")' "$ROUTER"
@@ -40,7 +43,10 @@ grep -q 'Visualizar' "$UI"
 grep -q 'Baixar' "$UI"
 grep -q 'Excluir' "$UI"
 grep -q 'fileExtension' "$UI"
-grep -q 'policy.extensions.includes' "$UI"
+grep -q 'policyForFile' "$UI"
+grep -q 'canonicalContentType' "$UI"
+grep -q 'GENERIC_BROWSER_TYPES' "$UI"
+grep -q 'application/octet-stream' "$UI"
 grep -q 'path="arquivos"' "$ROUTES"
 grep -q 'file_storage:/app/storage/uploads' "$COMPOSE"
 grep -q 'client_max_body_size 13m' "$NGINX"
@@ -50,6 +56,13 @@ grep -q 'client_max_body_size 13m' "$NGINX"
 # reject uploads even while curl-based smoke tests still pass.
 ! grep -q 'Content-Type.*multipart/form-data' "$UI"
 ! grep -q 'Content-Type.*application/json' "$API_CONFIG"
+
+# A real browser may report a supported file as an empty MIME or generic
+# application/octet-stream. The client must not index policy exclusively by
+# file.type, and the server must still validate the actual signature.
+! grep -q 'FILE_POLICIES\[file\.type\]' "$UI"
+grep -q 'application/octet-stream' "$TESTS"
+grep -q 'generic_wrong_signature' "$TESTS"
 
 # Unsafe active document types must not be part of the allowlist.
 ! grep -q 'text/html.*FilePolicy' "$SERVICE"
