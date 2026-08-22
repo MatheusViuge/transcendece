@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 
+import AdminUsers from "@/pages/Admin/Users";
 import DashboardAluno from "@/pages/Aluno/Dashboard";
 import NotFound from "@/pages/NotFound";
 import PaginaEmConstrucao from "@/pages/PaginaEmConstrucao";
@@ -56,9 +57,9 @@ export function AppRoutes() {
                 </Route>
 
                 <Route path="/admin">
-                    <Route index element={<Navigate to="/admin/dashboard" replace />} />
+                    <Route index element={<Navigate to="/admin/usuarios" replace />} />
                     <Route path="dashboard" element={<PaginaEmConstrucao />} />
-                    <Route path="usuarios" element={<PaginaEmConstrucao />} />
+                    <Route path="usuarios" element={<AdminUsers />} />
                     <Route path="cursos" element={<PaginaEmConstrucao />} />
                     <Route path="cursos/:id/editar" element={<PaginaEmConstrucao />} />
                     <Route path="solicitacoes" element={<PaginaEmConstrucao />} />
