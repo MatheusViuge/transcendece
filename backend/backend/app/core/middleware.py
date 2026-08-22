@@ -9,6 +9,7 @@ PUBLIC_PATHS = {
     "/auth/login",
     "/auth/register",
     "/courses",
+    "/search/courses",
     "/docs",
     "/redoc",
     "/openapi.json",

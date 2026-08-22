@@ -1,88 +1,244 @@
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useSearchParams } from "react-router-dom";
+
+import { Button } from "@/components/Button";
+import { BaseInput } from "@/components/Form";
+import { Alert, Pagination, Spinner } from "@/design-system";
+import type { ICourseSearchData } from "@/interfaces/cursos";
+import { searchSchema } from "@/pages/Publico/schemas/searchSchema";
+import { api, catchCustom } from "@/services/api";
+
 import CoursesCount from "./components/CoursesCount";
 import CoursesGrid from "./components/CoursesGrid";
 import EmptyState from "./components/EmptyState";
-import { BaseInput } from "@/components/Form";
-import { api, catchCustom } from "@/services/api";
-import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useSearchParams } from "react-router-dom";
-import type { ICursos } from "@/interfaces/cursos";
-import { searchSchema, type SearchFormData } from "@/pages/Publico/schemas/searchSchema";
+import { SearchFilters } from "./components/SearchFilters";
+import {
+  buildSearchRequestParams,
+  readSearchState,
+  searchStateToParams,
+  type SearchState,
+} from "./searchState";
 
-export default function Explore() {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const [cursos, setCursos] = useState<ICursos[]>([]);
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<SearchFormData>({
-    resolver: zodResolver(searchSchema),
-    defaultValues: { busca: searchParams.get("busca") ?? "" },
-  });
+const EMPTY_FACETS: ICourseSearchData["facets"] = {
+  categories: [],
+  levels: [],
+  instructors: [],
+};
+
+type SearchBoxProps = {
+  initialQuery: string;
+  onSearch: (query: string) => void;
+};
+
+function SearchBox({ initialQuery, onSearch }: SearchBoxProps) {
+  const formRef = useRef<HTMLFormElement>(null);
+  const [queryError, setQueryError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const input = formRef.current?.elements.namedItem("buscar");
+    if (input instanceof HTMLInputElement && input.value !== initialQuery) {
+      input.value = initialQuery;
+    }
+  }, [initialQuery]);
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const parsed = searchSchema.safeParse({
+      busca: String(formData.get("buscar") ?? ""),
+    });
+
+    if (!parsed.success) {
+      setQueryError(parsed.error.issues[0]?.message ?? "Busca inválida.");
+      return;
+    }
+
+    setQueryError(null);
+    onSearch(parsed.data.busca);
+  };
+
+  return (
+    <form
+      ref={formRef}
+      onSubmit={handleSubmit}
+      className="col-span-full grid gap-2 lg:grid-cols-[minmax(0,42rem)_auto] lg:items-start"
+    >
+      <div className="grid gap-1">
+        <label htmlFor="buscar" className="text-sm font-medium text-text">
+          Buscar cursos
+        </label>
+        <BaseInput
+          id="buscar"
+          defaultValue={initialQuery}
+          placeholder="Título, descrição, categoria, nível ou instrutor..."
+          maxLength={120}
+          aria-invalid={Boolean(queryError)}
+        />
+        {queryError && (
+          <p className="text-xs text-danger" role="alert">
+            {queryError}
+          </p>
+        )}
+      </div>
+      <Button type="submit" variant="accent" className="lg:mt-6">
+        Buscar
+      </Button>
+    </form>
+  );
+}
+
+type SearchResultsProps = {
+  state: SearchState;
+  onPageChange: (page: number) => void;
+  onPageCorrection: (page: number) => void;
+  onFacetsReady: (facets: ICourseSearchData["facets"]) => void;
+};
+
+function SearchResults({
+  state,
+  onPageChange,
+  onPageCorrection,
+  onFacetsReady,
+}: SearchResultsProps) {
+  const [result, setResult] = useState<ICourseSearchData | null>(null);
+  const [requestError, setRequestError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let active = true;
 
-    api.get<ICursos[]>({ url: "/courses/", hiddenToast: true })
+    api.get<ICourseSearchData>({
+      url: "/search/courses",
+      config: { params: buildSearchRequestParams(state) },
+      hiddenToast: true,
+    })
       .then((response) => {
-        if (active) setCursos(response.data);
+        if (!active) return;
+
+        const maxPage = Math.max(response.data.pagination.total_pages, 1);
+        if (state.page > maxPage) {
+          onPageCorrection(maxPage);
+          return;
+        }
+
+        setResult(response.data);
+        onFacetsReady(response.data.facets);
       })
       .catch((error) => {
-        if (active) catchCustom(error);
+        if (!active) return;
+        setRequestError("Não foi possível carregar os cursos. Tente novamente.");
+        catchCustom(error);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
       });
 
     return () => {
       active = false;
     };
-  }, []);
+  }, [onFacetsReady, onPageCorrection, state]);
 
-  const onSearch = ({ busca }: SearchFormData) => {
-    const nextParams = new URLSearchParams(searchParams);
+  if (loading) {
+    return (
+      <section className="grid min-h-64 place-items-center" aria-busy="true">
+        <Spinner size="lg" label="Buscando cursos" />
+      </section>
+    );
+  }
 
-    if (busca) nextParams.set("busca", busca);
-    else nextParams.delete("busca");
+  if (requestError) {
+    return (
+      <section className="min-w-0">
+        <Alert tone="danger" title="Erro na busca">
+          {requestError}
+        </Alert>
+      </section>
+    );
+  }
 
-    setSearchParams(nextParams);
-  };
-
-  const query = (searchParams.get("busca") ?? "").trim().toLocaleLowerCase("pt-BR");
-  const visibleCourses = query
-    ? cursos.filter((course) =>
-        [course.titulo, course.instrutor]
-          .filter(Boolean)
-          .some((value) => value.toLocaleLowerCase("pt-BR").includes(query)),
-      )
-    : cursos;
+  if (!result || result.items.length === 0) {
+    return (
+      <section className="min-w-0">
+        <EmptyState />
+      </section>
+    );
+  }
 
   return (
-    <div className="grid md:grid-cols-[25rem_1fr] gap-8 w-full mx-auto py-8 px-2 xs:px-16">
-      <form onSubmit={handleSubmit(onSearch)} className="col-span-full grid w-full max-w-2xl gap-1">
-        <BaseInput
-          id="buscar"
-          placeholder="Buscar cursos..."
-          maxLength={120}
-          aria-invalid={Boolean(errors.busca)}
-          {...register("busca")}
+    <section className="grid min-w-0 gap-6">
+      <CoursesCount count={result.pagination.total} />
+      <CoursesGrid courses={result.items} />
+      <Pagination
+        page={result.pagination.page}
+        totalPages={result.pagination.total_pages}
+        onPageChange={onPageChange}
+      />
+    </section>
+  );
+}
+
+export default function Explore() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const searchKey = searchParams.toString();
+  const state = useMemo(
+    () => readSearchState(new URLSearchParams(searchKey)),
+    [searchKey],
+  );
+  const canonicalKey = useMemo(
+    () => searchStateToParams(state).toString(),
+    [state],
+  );
+  const [facets, setFacets] = useState<ICourseSearchData["facets"]>(EMPTY_FACETS);
+
+  useEffect(() => {
+    if (searchKey !== canonicalKey) {
+      setSearchParams(new URLSearchParams(canonicalKey), { replace: true });
+    }
+  }, [canonicalKey, searchKey, setSearchParams]);
+
+  const updateState = useCallback(
+    (patch: Partial<SearchState>, replace = false) => {
+      setSearchParams(searchStateToParams({ ...state, ...patch }), { replace });
+    },
+    [setSearchParams, state],
+  );
+
+  const handlePageChange = useCallback(
+    (page: number) => updateState({ page }),
+    [updateState],
+  );
+  const handlePageCorrection = useCallback(
+    (page: number) => updateState({ page }, true),
+    [updateState],
+  );
+
+  return (
+    <main className="grid w-full gap-8 px-4 py-8 sm:px-8 md:grid-cols-[18rem_1fr] lg:px-16">
+      <SearchBox
+        initialQuery={state.q}
+        onSearch={(query) => updateState({ q: query, page: 1 })}
+      />
+
+      <SearchFilters
+        state={state}
+        facets={facets}
+        onChange={(patch) => updateState(patch)}
+        onClear={() => setSearchParams(new URLSearchParams())}
+      />
+
+      {searchKey === canonicalKey ? (
+        <SearchResults
+          key={canonicalKey}
+          state={state}
+          onPageChange={handlePageChange}
+          onPageCorrection={handlePageCorrection}
+          onFacetsReady={setFacets}
         />
-        {errors.busca && (
-          <p className="text-xs text-red" role="alert">{errors.busca.message}</p>
-        )}
-      </form>
-
-      <section className="w-full" />
-
-      <div>
-        {visibleCourses.length > 0 ? (
-          <>
-            <CoursesCount count={visibleCourses.length} />
-            <CoursesGrid courses={visibleCourses} />
-          </>
-        ) : (
-          <EmptyState />
-        )}
-      </div>
-    </div>
+      ) : (
+        <section className="grid min-h-64 place-items-center" aria-busy="true">
+          <Spinner size="lg" label="Normalizando busca" />
+        </section>
+      )}
+    </main>
   );
 }
