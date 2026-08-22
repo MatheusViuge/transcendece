@@ -37,6 +37,8 @@ jobs:
         run: sh ../scripts/design-system-check.sh
       - name: PWA structural and security check
         run: sh ../scripts/pwa-check.sh
+      - name: Advanced Search structural check
+        run: sh ../scripts/search-check.sh
 
   backend:
     name: Backend mandatory regression
@@ -147,6 +149,7 @@ jobs:
         run: |
           curl --silent --show-error --fail --insecure https://localhost/ >/dev/null
           curl --silent --show-error --fail --insecure https://localhost/login >/dev/null
+          curl --silent --show-error --fail --insecure https://localhost/explorar >/dev/null
           curl --silent --show-error --fail --insecure https://localhost/privacidade >/dev/null
           curl --silent --show-error --fail --insecure https://localhost/termos >/dev/null
           curl --silent --show-error --fail --insecure https://localhost/design-system >/dev/null
@@ -164,6 +167,18 @@ jobs:
           curl --silent --show-error --fail --insecure https://localhost/pwa/icon-192.png >/dev/null
           curl --silent --show-error --fail --insecure https://localhost/pwa/icon-512.png >/dev/null
           ! curl --silent --show-error --fail --insecure https://localhost/ | grep -q '__BRAND_NAME__'
+      - name: Verify Advanced Search through HTTPS
+        shell: bash
+        run: |
+          curl --silent --show-error --fail --insecure \
+            'https://localhost/api/search/courses?sort=title&order=asc&page=1&page_size=5' \
+            -o /tmp/search.json
+          grep -q '"items"' /tmp/search.json
+          grep -q '"pagination"' /tmp/search.json
+          grep -q '"facets"' /tmp/search.json
+          invalid_status=$(curl --silent --output /dev/null --write-out '%{http_code}' --insecure \
+            'https://localhost/api/search/courses?sort=invalid')
+          test "$invalid_status" = "422"
       - name: Verify Framework and ORM module integration
         run: sh scripts/framework-orm-smoke.sh
       - name: Verify internal ports are not public
@@ -210,4 +225,4 @@ jobs:
       - name: Print Git author summary for human review
         run: git shortlog -sne --all
       - name: Confirm automated mandatory checks
-        run: echo 'Frontend, backend, deployment, Framework/ORM, Design System, PWA and secret-file checks passed.'
+        run: echo 'Frontend, backend, deployment, Framework/ORM, Design System, PWA, Advanced Search and secret-file checks passed.'
