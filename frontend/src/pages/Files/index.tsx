@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/Button";
 import Card from "@/components/Card";
@@ -27,6 +27,13 @@ type StoredFile = {
     content_url: string;
 };
 
+type PreviewState = {
+    url?: string;
+    text?: string;
+    type: string;
+    name: string;
+};
+
 function prettySize(bytes: number) {
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -45,26 +52,34 @@ export default function Files() {
     const [files, setFiles] = useState<StoredFile[]>([]);
     const [selected, setSelected] = useState<File | null>(null);
     const [selectedPreview, setSelectedPreview] = useState<string | null>(null);
-    const [preview, setPreview] = useState<{ url: string; type: string; name: string } | null>(null);
+    const [preview, setPreview] = useState<PreviewState | null>(null);
     const [progress, setProgress] = useState(0);
     const [uploading, setUploading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [loaded, setLoaded] = useState(false);
+    const [reloadKey, setReloadKey] = useState(0);
     const previewRef = useRef<string | null>(null);
     const selectedPreviewRef = useRef<string | null>(null);
 
-    async function refresh() {
-        try {
-            const response = await api.get<StoredFile[]>({ url: "/files", hiddenToast: true });
-            setFiles(response.data ?? []);
-        } catch (err) {
-            catchCustom(err);
-        } finally {
-            setLoaded(true);
+    useEffect(() => {
+        let active = true;
+        async function loadFiles() {
+            try {
+                const response = await api.get<StoredFile[]>({ url: "/files", hiddenToast: true });
+                if (active) setFiles(response.data ?? []);
+            } catch (err) {
+                if (active) catchCustom(err);
+            }
         }
-    }
+        void loadFiles();
+        return () => {
+            active = false;
+        };
+    }, [reloadKey]);
 
-    if (!loaded) void refresh();
+    useEffect(() => () => {
+        if (previewRef.current) URL.revokeObjectURL(previewRef.current);
+        if (selectedPreviewRef.current) URL.revokeObjectURL(selectedPreviewRef.current);
+    }, []);
 
     function chooseFile(file: File | null) {
         if (selectedPreviewRef.current) URL.revokeObjectURL(selectedPreviewRef.current);
@@ -106,7 +121,7 @@ export default function Files() {
                 },
             });
             chooseFile(null);
-            setLoaded(false);
+            setReloadKey((value) => value + 1);
         } catch (err) {
             setError("O servidor rejeitou o upload. Confira formato e tamanho.");
             catchCustom(err);
@@ -115,13 +130,41 @@ export default function Files() {
         }
     }
 
+    async function fetchBlob(item: StoredFile) {
+        const response = await apiConfig().get(`/files/${item.id}/content`, { responseType: "blob" });
+        return response.data as Blob;
+    }
+
     async function openPreview(item: StoredFile) {
         try {
-            const response = await apiConfig().get(`/files/${item.id}/content`, { responseType: "blob" });
+            const blob = await fetchBlob(item);
             if (previewRef.current) URL.revokeObjectURL(previewRef.current);
-            const url = URL.createObjectURL(response.data);
+            previewRef.current = null;
+
+            if (item.content_type === "text/plain") {
+                setPreview({ text: await blob.text(), type: item.content_type, name: item.original_name });
+                return;
+            }
+
+            const url = URL.createObjectURL(blob);
             previewRef.current = url;
             setPreview({ url, type: item.content_type, name: item.original_name });
+        } catch (err) {
+            catchCustom(err);
+        }
+    }
+
+    async function download(item: StoredFile) {
+        try {
+            const response = await apiConfig().get(`/files/${item.id}/content?download=true`, { responseType: "blob" });
+            const url = URL.createObjectURL(response.data);
+            const anchor = document.createElement("a");
+            anchor.href = url;
+            anchor.download = item.original_name;
+            document.body.appendChild(anchor);
+            anchor.click();
+            anchor.remove();
+            URL.revokeObjectURL(url);
         } catch (err) {
             catchCustom(err);
         }
@@ -178,6 +221,9 @@ export default function Files() {
                         {selectedPreview && selected.type === "application/pdf" && (
                             <iframe title={`Preview de ${selected.name}`} src={selectedPreview} className="mt-4 h-64 w-full rounded-card border border-border" />
                         )}
+                        {selected.type === "text/plain" && (
+                            <p className="mt-4 text-sm text-text-muted">TXT selecionado. O conteúdo será validado como UTF-8 pelo servidor.</p>
+                        )}
                         {(uploading || progress > 0) && (
                             <div className="mt-4">
                                 <div className="mb-1 flex justify-between text-sm text-text-muted"><span>Progresso</span><span>{progress}%</span></div>
@@ -200,6 +246,7 @@ export default function Files() {
                         </div>
                         <div className="flex flex-wrap gap-2">
                             <Button type="button" variant="secondary" onClick={() => openPreview(item)}>Visualizar</Button>
+                            <Button type="button" variant="secondary" onClick={() => download(item)}>Baixar</Button>
                             <Button type="button" variant="danger" onClick={() => remove(item)}>Excluir</Button>
                         </div>
                     </Card>
@@ -207,9 +254,9 @@ export default function Files() {
             </div>
 
             <Modal open={preview !== null} title={preview?.name ?? "Preview"} onClose={closePreview}>
-                {preview?.type.startsWith("image/") && <img src={preview.url} alt={preview.name} className="max-h-[65vh] w-full object-contain" />}
-                {preview?.type === "application/pdf" && <iframe title={preview.name} src={preview.url} className="h-[65vh] w-full border-0" />}
-                {preview?.type === "text/plain" && <p className="text-sm text-text-muted">Arquivo TXT validado. Use download/abertura pelo navegador quando necessário.</p>}
+                {preview?.url && preview.type.startsWith("image/") && <img src={preview.url} alt={preview.name} className="max-h-[65vh] w-full object-contain" />}
+                {preview?.url && preview.type === "application/pdf" && <iframe title={preview.name} src={preview.url} className="h-[65vh] w-full border-0" />}
+                {preview?.type === "text/plain" && <pre className="max-h-[65vh] overflow-auto whitespace-pre-wrap rounded-card bg-surface-subtle p-4 text-sm text-text">{preview.text}</pre>}
             </Modal>
         </section>
     );
