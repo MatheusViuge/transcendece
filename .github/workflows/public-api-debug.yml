@@ -31,6 +31,26 @@ jobs:
       - name: Install dependencies
         working-directory: backend
         run: pip install -r requirements.txt
+      - name: Show effective routing table
+        shell: bash
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+
+          db_path = Path('/tmp/public-api-debug.sqlite3')
+          os.environ['DATABASE_URL'] = f'sqlite+pysqlite:///{db_path}'
+          os.environ['JWT_SECRET_KEY'] = 'debug-only-jwt-secret-that-is-long-enough-123456'
+
+          from app.main import app
+
+          print(f'root_path={app.root_path!r}')
+          for route in app.routes:
+              path = getattr(route, 'path', None)
+              methods = sorted(getattr(route, 'methods', []) or [])
+              if path:
+                  print(f'{methods} {path}')
+          PY
       - name: Run focused Public API regression
         shell: bash
         run: |
