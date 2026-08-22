@@ -112,7 +112,6 @@ def current_user(
         "id": user.id,
         "email": user.email,
         "role": current_role,
-        "is_active": bool(getattr(user, "is_active", True)),
     }
 
 
