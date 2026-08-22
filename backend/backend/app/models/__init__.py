@@ -12,3 +12,4 @@ from .progress import ProgressoAulas
 from .certificate import Certificado
 from .level import Nivel
 from .api_key import ApiKey
+from .uploaded_file import UploadedFile
