@@ -61,6 +61,8 @@ jobs:
         run: pip install -r requirements.txt
       - name: Run mandatory regression
         run: pytest
+      - name: Public API structural and security check
+        run: sh ../../scripts/public-api-check.sh
 
   deployment:
     name: Compose HTTPS and clean-install smoke
@@ -219,6 +221,8 @@ jobs:
           invalid_status=$(curl --silent --output /dev/null --write-out '%{http_code}' --insecure \
             'https://localhost/api/search/courses?sort=invalid')
           test "$invalid_status" = "422"
+      - name: Verify Public API through HTTPS
+        run: sh scripts/public-api-smoke.sh
       - name: Verify Framework and ORM module integration
         run: sh scripts/framework-orm-smoke.sh
       - name: Verify internal ports are not public
@@ -265,4 +269,4 @@ jobs:
       - name: Print Git author summary for human review
         run: git shortlog -sne --all
       - name: Confirm automated mandatory checks
-        run: echo 'Frontend, backend, deployment, Framework/ORM, Design System, PWA, Advanced Search and secret-file checks passed.'
+        run: echo 'Frontend, backend, deployment, Framework/ORM, Design System, PWA, Advanced Search, Public API and secret-file checks passed.'

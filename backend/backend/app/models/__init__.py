@@ -11,3 +11,4 @@ from .evaluation import AvaliacaoCurso
 from .progress import ProgressoAulas
 from .certificate import Certificado
 from .level import Nivel
+from .api_key import ApiKey

@@ -79,3 +79,10 @@ class Usuario(Base):
         "AvaliacaoCurso",
         back_populates="usuario"
     )
+
+    # API Key 1:N → Um usuário pode administrar várias credenciais externas
+    api_keys = relationship(
+        "ApiKey",
+        back_populates="owner",
+        cascade="all, delete-orphan",
+    )
