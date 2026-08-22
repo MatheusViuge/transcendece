@@ -15,6 +15,7 @@ grep -q 'url: "/search/courses"' "$EXPLORE"
 grep -q 'useSearchParams' "$EXPLORE"
 grep -q 'searchStateToParams' "$EXPLORE"
 grep -q 'buildSearchRequestParams' "$EXPLORE"
+grep -q 'formRef' "$EXPLORE"
 
 for key in category_id level_id instructor_id price sort order page page_size; do
   grep -q "$key" "$STATE"
@@ -31,6 +32,11 @@ fi
 
 if grep -q 'visibleCourses' "$EXPLORE"; then
   echo "Filtro client-side legado ainda está presente." >&2
+  exit 1
+fi
+
+if grep -q 'key={state.q}' "$EXPLORE"; then
+  echo "SearchBox não deve ser remontado a cada alteração da query." >&2
   exit 1
 fi
 

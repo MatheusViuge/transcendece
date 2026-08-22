@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useSearchParams } from "react-router-dom";
 
 import { Button } from "@/components/Button";
@@ -31,12 +31,22 @@ type SearchBoxProps = {
 };
 
 function SearchBox({ initialQuery, onSearch }: SearchBoxProps) {
-  const [queryInput, setQueryInput] = useState(initialQuery);
+  const formRef = useRef<HTMLFormElement>(null);
   const [queryError, setQueryError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const input = formRef.current?.elements.namedItem("buscar");
+    if (input instanceof HTMLInputElement && input.value !== initialQuery) {
+      input.value = initialQuery;
+    }
+  }, [initialQuery]);
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const parsed = searchSchema.safeParse({ busca: queryInput });
+    const formData = new FormData(event.currentTarget);
+    const parsed = searchSchema.safeParse({
+      busca: String(formData.get("buscar") ?? ""),
+    });
 
     if (!parsed.success) {
       setQueryError(parsed.error.issues[0]?.message ?? "Busca inválida.");
@@ -49,6 +59,7 @@ function SearchBox({ initialQuery, onSearch }: SearchBoxProps) {
 
   return (
     <form
+      ref={formRef}
       onSubmit={handleSubmit}
       className="col-span-full grid gap-2 lg:grid-cols-[minmax(0,42rem)_auto] lg:items-start"
     >
@@ -58,8 +69,7 @@ function SearchBox({ initialQuery, onSearch }: SearchBoxProps) {
         </label>
         <BaseInput
           id="buscar"
-          value={queryInput}
-          onChange={(event) => setQueryInput(event.target.value)}
+          defaultValue={initialQuery}
           placeholder="Título, descrição, categoria, nível ou instrutor..."
           maxLength={120}
           aria-invalid={Boolean(queryError)}
@@ -205,7 +215,6 @@ export default function Explore() {
   return (
     <main className="grid w-full gap-8 px-4 py-8 sm:px-8 md:grid-cols-[18rem_1fr] lg:px-16">
       <SearchBox
-        key={state.q}
         initialQuery={state.q}
         onSearch={(query) => updateState({ q: query, page: 1 })}
       />
