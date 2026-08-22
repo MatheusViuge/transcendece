@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
-import { Icon, type SystemIconName } from "../icons";
+import { Icon } from "../icons";
+import type { SystemIconName } from "../iconRegistry";
 
 export type EmptyStateProps = {
   title: string;

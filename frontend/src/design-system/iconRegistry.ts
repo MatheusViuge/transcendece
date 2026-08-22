@@ -1,12 +1,11 @@
 import type { IconType } from "react-icons";
 import {
-  LuAlertCircle,
   LuArrowLeft,
   LuCheck,
-  LuCheckCircle2,
   LuChevronLeft,
   LuChevronRight,
   LuCircleAlert,
+  LuCircleCheck,
   LuCircleX,
   LuHammer,
   LuInfo,
@@ -17,10 +16,10 @@ import {
 } from "react-icons/lu";
 
 export const systemIcons = {
-  alert: LuAlertCircle,
+  alert: LuInfo,
   back: LuArrowLeft,
   check: LuCheck,
-  success: LuCheckCircle2,
+  success: LuCircleCheck,
   previous: LuChevronLeft,
   next: LuChevronRight,
   warning: LuTriangleAlert,
