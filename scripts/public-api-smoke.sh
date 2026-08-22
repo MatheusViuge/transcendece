@@ -4,6 +4,25 @@ set -eu
 BASE_URL=${BASE_URL:-https://localhost/api}
 CURL="curl --silent --show-error --insecure"
 
+$CURL --fail "$BASE_URL/openapi.json" > /tmp/public-api-openapi.json
+python - <<'PY'
+import json
+
+with open('/tmp/public-api-openapi.json', encoding='utf-8') as handle:
+    document = json.load(handle)
+
+paths = document['paths']
+assert '/v1/public/courses' in paths
+assert {'get', 'post'}.issubset(paths['/v1/public/courses'])
+assert {'get', 'put', 'delete'}.issubset(paths['/v1/public/courses/{course_id}'])
+assert '/keys' in paths
+
+scheme = document['components']['securitySchemes']['APIKeyHeader']
+assert scheme['type'] == 'apiKey'
+assert scheme['in'] == 'header'
+assert scheme['name'] == 'X-API-Key'
+PY
+
 $CURL --fail -H 'Content-Type: application/json' \
   -d '{"email":"ana.ribeiro@seed.example.com","senha":"SearchSeed42!"}' \
   "$BASE_URL/auth/login" > /tmp/public-api-login.json
@@ -51,8 +70,11 @@ for _ in $(seq 1 20); do
   code=$($CURL --output /dev/null --write-out '%{http_code}' -H "X-API-Key: $RATE_KEY" "$BASE_URL/v1/public/courses?page_size=1")
   test "$code" = "200"
 done
-limited=$($CURL --output /dev/null --write-out '%{http_code}' -H "X-API-Key: $RATE_KEY" "$BASE_URL/v1/public/courses?page_size=1")
+limited=$($CURL --dump-header /tmp/public-api-rate-headers.txt --output /dev/null --write-out '%{http_code}' -H "X-API-Key: $RATE_KEY" "$BASE_URL/v1/public/courses?page_size=1")
 test "$limited" = "429"
+grep -Eiq '^x-ratelimit-limit:[[:space:]]*20' /tmp/public-api-rate-headers.txt
+grep -Eiq '^x-ratelimit-remaining:[[:space:]]*0' /tmp/public-api-rate-headers.txt
+grep -Eiq '^retry-after:[[:space:]]*[1-9][0-9]*' /tmp/public-api-rate-headers.txt
 
 $CURL --fail -X DELETE -H "Authorization: Bearer $TOKEN" "$BASE_URL/keys/$KEY_ID" >/dev/null
 revoked=$($CURL --output /dev/null --write-out '%{http_code}' -H "X-API-Key: $API_KEY" "$BASE_URL/v1/public/courses")
