@@ -1,0 +1,45 @@
+name: Public API Debug
+
+on:
+  push:
+    branches:
+      - agent/epic-5-public-api
+  pull_request:
+    paths:
+      - 'backend/**'
+      - '.github/workflows/public-api-debug.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  public-api-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: backend/backend
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - name: Install dependencies
+        working-directory: backend
+        run: pip install -r requirements.txt
+      - name: Run focused Public API regression
+        shell: bash
+        run: |
+          set -o pipefail
+          pytest -vv --tb=short tests/test_public_api.py 2>&1 | tee public-api-pytest.log
+      - name: Upload focused test log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-api-pytest-log
+          path: backend/backend/public-api-pytest.log
+          if-no-files-found: error
