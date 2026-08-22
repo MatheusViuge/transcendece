@@ -7,18 +7,20 @@ import { api, catchCustom } from "@/services/api";
 import { apiConfig } from "@/services/api/apiConfig";
 
 type FilePolicy = {
+    contentType: string;
     extensions: string[];
     maxBytes: number;
 };
 
-const FILE_POLICIES: Record<string, FilePolicy> = {
-    "image/png": { extensions: [".png"], maxBytes: 8 * 1024 * 1024 },
-    "image/jpeg": { extensions: [".jpg", ".jpeg"], maxBytes: 8 * 1024 * 1024 },
-    "image/webp": { extensions: [".webp"], maxBytes: 8 * 1024 * 1024 },
-    "application/pdf": { extensions: [".pdf"], maxBytes: 12 * 1024 * 1024 },
-    "text/plain": { extensions: [".txt"], maxBytes: 2 * 1024 * 1024 },
-};
+const FILE_POLICIES: FilePolicy[] = [
+    { contentType: "image/png", extensions: [".png"], maxBytes: 8 * 1024 * 1024 },
+    { contentType: "image/jpeg", extensions: [".jpg", ".jpeg"], maxBytes: 8 * 1024 * 1024 },
+    { contentType: "image/webp", extensions: [".webp"], maxBytes: 8 * 1024 * 1024 },
+    { contentType: "application/pdf", extensions: [".pdf"], maxBytes: 12 * 1024 * 1024 },
+    { contentType: "text/plain", extensions: [".txt"], maxBytes: 2 * 1024 * 1024 },
+];
 
+const GENERIC_BROWSER_TYPES = new Set(["", "application/octet-stream"]);
 const ACCEPT = ".png,.jpg,.jpeg,.webp,.pdf,.txt";
 
 type StoredFile = {
@@ -50,12 +52,25 @@ function fileExtension(name: string) {
     return index >= 0 ? name.slice(index).toLowerCase() : "";
 }
 
+function browserContentType(file: File) {
+    return (file.type || "").toLowerCase().split(";", 1)[0].trim();
+}
+
+function policyForFile(file: File): FilePolicy | null {
+    const extension = fileExtension(file.name);
+    return FILE_POLICIES.find((policy) => policy.extensions.includes(extension)) ?? null;
+}
+
+function canonicalContentType(file: File): string {
+    return policyForFile(file)?.contentType ?? browserContentType(file);
+}
+
 function validateFile(file: File): string | null {
-    const policy = FILE_POLICIES[file.type];
+    const policy = policyForFile(file);
     if (!policy) return "Tipo não suportado. Use PNG, JPEG, WebP, PDF ou TXT.";
 
-    const extension = fileExtension(file.name);
-    if (!policy.extensions.includes(extension)) {
+    const declaredType = browserContentType(file);
+    if (!GENERIC_BROWSER_TYPES.has(declaredType) && declaredType !== policy.contentType) {
         return "A extensão do arquivo não corresponde ao tipo detectado pelo navegador.";
     }
 
@@ -115,7 +130,8 @@ export default function Files() {
         }
 
         setSelected(file);
-        if (file.type.startsWith("image/") || file.type === "application/pdf") {
+        const contentType = canonicalContentType(file);
+        if (contentType.startsWith("image/") || contentType === "application/pdf") {
             const url = URL.createObjectURL(file);
             selectedPreviewRef.current = url;
             setSelectedPreview(url);
@@ -207,6 +223,8 @@ export default function Files() {
         setPreview(null);
     }
 
+    const selectedType = selected ? canonicalContentType(selected) : "";
+
     return (
         <section className="mx-auto w-full max-w-5xl px-4 py-10 md:px-8">
             <div className="mb-8">
@@ -232,17 +250,17 @@ export default function Files() {
                         <div className="flex flex-wrap items-center justify-between gap-3">
                             <div>
                                 <strong className="block text-text">{selected.name}</strong>
-                                <span className="text-sm text-text-muted">{selected.type} · {prettySize(selected.size)}</span>
+                                <span className="text-sm text-text-muted">{selectedType} · {prettySize(selected.size)}</span>
                             </div>
                             <Button type="button" onClick={upload} loading={uploading}>Enviar arquivo</Button>
                         </div>
-                        {selectedPreview && selected.type.startsWith("image/") && (
+                        {selectedPreview && selectedType.startsWith("image/") && (
                             <img src={selectedPreview} alt={`Preview de ${selected.name}`} className="mt-4 max-h-64 rounded-card object-contain" />
                         )}
-                        {selectedPreview && selected.type === "application/pdf" && (
+                        {selectedPreview && selectedType === "application/pdf" && (
                             <iframe title={`Preview de ${selected.name}`} src={selectedPreview} className="mt-4 h-64 w-full rounded-card border border-border" />
                         )}
-                        {selected.type === "text/plain" && (
+                        {selectedType === "text/plain" && (
                             <p className="mt-4 text-sm text-text-muted">TXT selecionado. O conteúdo será validado como UTF-8 pelo servidor.</p>
                         )}
                         {(uploading || progress > 0) && (
