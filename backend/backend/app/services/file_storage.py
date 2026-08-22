@@ -25,6 +25,7 @@ POLICIES: dict[str, FilePolicy] = {
     "text/plain": FilePolicy(frozenset({".txt"}), 2 * 1024 * 1024, ".txt"),
 }
 
+GENERIC_DECLARED_TYPES = frozenset({"", "application/octet-stream"})
 MAX_STREAM_BYTES = max(policy.max_bytes for policy in POLICIES.values())
 CHUNK_SIZE = 64 * 1024
 _SAFE_DISPLAY = re.compile(r"[^A-Za-z0-9._()\- À-ÿ]+")
@@ -40,6 +41,13 @@ def normalize_display_name(filename: str | None) -> str:
     raw = (filename or "arquivo").replace("\\", "/").split("/")[-1].strip()
     clean = _SAFE_DISPLAY.sub("_", raw).strip(" .") or "arquivo"
     return clean[:255]
+
+
+def _policy_for_extension(extension: str) -> tuple[str, FilePolicy] | None:
+    for canonical_type, policy in POLICIES.items():
+        if extension in policy.extensions:
+            return canonical_type, policy
+    return None
 
 
 def _validate_signature(content_type: str, header: bytes, full_content: bytes | None = None) -> None:
@@ -63,27 +71,34 @@ def _validate_signature(content_type: str, header: bytes, full_content: bytes | 
     if not valid:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="O conteúdo do arquivo não corresponde ao tipo declarado.",
+            detail="O conteúdo do arquivo não corresponde ao tipo esperado.",
         )
 
 
 def validate_declared_file(upload: UploadFile) -> tuple[str, FilePolicy, str]:
-    content_type = (upload.content_type or "").lower().split(";", 1)[0].strip()
-    policy = POLICIES.get(content_type)
-    if policy is None:
+    display_name = normalize_display_name(upload.filename)
+    extension = Path(display_name).suffix.lower()
+    resolved = _policy_for_extension(extension)
+    if resolved is None:
         raise HTTPException(
             status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
             detail="Tipo de arquivo não suportado. Use PNG, JPEG, WebP, PDF ou TXT.",
         )
 
-    display_name = normalize_display_name(upload.filename)
-    extension = Path(display_name).suffix.lower()
-    if extension not in policy.extensions:
+    canonical_type, policy = resolved
+    declared_type = (upload.content_type or "").lower().split(";", 1)[0].strip()
+
+    # Browsers/OSes are allowed to omit MIME metadata or fall back to
+    # application/octet-stream. We do not treat that client-provided metadata
+    # as authoritative; the real content is still verified by magic bytes/UTF-8
+    # before anything is moved into permanent storage.
+    if declared_type not in GENERIC_DECLARED_TYPES and declared_type != canonical_type:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="A extensão do arquivo não corresponde ao tipo declarado.",
+            detail="A extensão do arquivo não corresponde ao tipo declarado pelo cliente.",
         )
-    return content_type, policy, display_name
+
+    return canonical_type, policy, display_name
 
 
 async def persist_upload(upload: UploadFile) -> dict[str, object]:
