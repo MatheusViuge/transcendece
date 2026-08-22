@@ -1,40 +1,64 @@
 import type { ComponentProps } from "react";
 import { tv, type VariantProps } from "tailwind-variants";
 
-// Usei o tailwind-variants pra organizar as variações de estilo de forma limpa
 const buttonStyles = tv({
-  base: "py-1.5 px-4 rounded-lg font-normal border border-solid transition-all duration-200 flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-900 disabled:opacity-50 disabled:cursor-not-allowed hover:cursor-pointer",
-  
+  base: "inline-flex items-center justify-center gap-2 rounded-control border border-solid font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 hover:cursor-pointer",
   variants: {
     variant: {
-      primary: "bg-neutral-900 hover:bg-gray text-white border-transparent",
-      secondary: "bg-white hover:bg-neutral-200 text-neutral-900 border-black/50 hover:border-neutral-200",
-      accent: "bg-blue hover:bg-blue-500 text-white border-transparent",
-      badge: "bg-neutral-900 hover:bg-gray text-white text-xs px-2 py-1 border-transparent"
+      primary: "border-transparent bg-text text-white hover:bg-gray",
+      secondary: "border-border-strong bg-surface text-text hover:border-border hover:bg-surface-muted",
+      accent: "border-transparent bg-primary text-white hover:bg-primary-hover",
+      danger: "border-transparent bg-danger text-white hover:brightness-90",
+      ghost: "border-transparent bg-transparent text-text hover:bg-surface-muted",
+      badge: "min-h-6 border-transparent bg-text px-2 py-1 text-xs text-white hover:bg-gray",
+    },
+    size: {
+      sm: "min-h-9 px-3 text-sm",
+      md: "min-h-11 px-4 text-sm",
+      lg: "min-h-12 px-5 text-base",
+      icon: "min-h-11 min-w-11 p-2",
     },
     fullWidth: {
       true: "w-full",
       false: "w-auto",
     },
   },
-  
   defaultVariants: {
     variant: "primary",
+    size: "md",
     fullWidth: false,
   },
 });
 
-// Tipagem pro TypeScript reconhecer as variantes no autocomplete
 type ButtonSchema = VariantProps<typeof buttonStyles>;
-interface ButtonProps extends ComponentProps<'button'>, ButtonSchema {}
+interface ButtonProps extends ComponentProps<"button">, ButtonSchema {
+  loading?: boolean;
+}
 
-export function Button({ className, variant, fullWidth, ...props }: ButtonProps) {
+export function Button({
+  className,
+  variant,
+  size,
+  fullWidth,
+  loading = false,
+  disabled,
+  children,
+  ...props
+}: ButtonProps) {
   return (
-    <button 
-      className={buttonStyles({ variant, fullWidth, className })} 
-      {...props} 
+    <button
+      className={buttonStyles({ variant, size, fullWidth, className })}
+      disabled={disabled || loading}
+      aria-busy={loading || undefined}
+      {...props}
     >
-      {props.children}
+      {loading && (
+        <span
+          aria-hidden="true"
+          className="h-4 w-4 animate-spin rounded-full border-2 border-current border-r-transparent"
+        />
+      )}
+      {children}
     </button>
   );
 }
