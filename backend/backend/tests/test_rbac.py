@@ -165,3 +165,33 @@ def test_inactive_account_invalidates_existing_session_immediately(client):
     )
     assert disabled.status_code == 200
     assert client.get("/auth/me", headers=_bearer(student_token)).status_code == 403
+
+
+def test_inactive_owner_invalidates_existing_public_api_key(client):
+    _seed()
+    admin_token = _login(client, RBAC_ADMIN_EMAIL)
+    ana_token = _login(client, "ana.ribeiro@seed.example.com")
+
+    created = client.post(
+        "/keys",
+        headers=_bearer(ana_token),
+        json={"name": "rbac-owner-state", "scopes": ["courses:read", "courses:write"]},
+    )
+    assert created.status_code == 201, created.text
+    secret = created.json()["data"]["secret"]
+    headers = {"X-API-Key": secret}
+    assert client.get("/v1/public/courses?page_size=1", headers=headers).status_code == 200
+
+    db = SessionLocal()
+    try:
+        ana_id = db.query(Usuario).filter(Usuario.email == "ana.ribeiro@seed.example.com").one().id
+    finally:
+        db.close()
+
+    disabled = client.patch(
+        f"/admin/users/{ana_id}/status",
+        headers=_bearer(admin_token),
+        json={"is_active": False},
+    )
+    assert disabled.status_code == 200
+    assert client.get("/v1/public/courses?page_size=1", headers=headers).status_code == 401
