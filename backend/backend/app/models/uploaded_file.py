@@ -18,4 +18,4 @@ class UploadedFile(Base):
     purpose = Column(String(50), nullable=False, default="general", server_default="general")
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
-    owner = relationship("Usuario", back_populates="uploaded_files")
+    owner = relationship("Usuario", back_populates="uploaded_files", foreign_keys=[owner_id])
