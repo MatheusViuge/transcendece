@@ -194,8 +194,8 @@ def remove_avatar(db: Session = Depends(get_db), identity=Depends(allowed_roles(
 
 
 @router.get("/{user_id}/avatar")
-def get_avatar(user_id: int, db: Session = Depends(get_db), identity=Depends(allowed_roles())):
-    del identity
+def get_avatar(user_id: int, db: Session = Depends(get_db)):
+    """Serve somente o avatar explicitamente escolhido para o perfil público."""
     user = _get_active_user(db, user_id)
     if user.avatar_file_id is None:
         return RedirectResponse(url=DEFAULT_AVATAR_URL, status_code=status.HTTP_307_TEMPORARY_REDIRECT)
@@ -206,7 +206,7 @@ def get_avatar(user_id: int, db: Session = Depends(get_db), identity=Depends(all
     if not path.is_file():
         raise HTTPException(status_code=status.HTTP_410_GONE, detail="Avatar físico não está disponível.")
     encoded_name = quote(Path(item.original_name).name, safe="")
-    return FileResponse(path=path, media_type=item.content_type, headers={"Content-Disposition": f"inline; filename*=UTF-8''{encoded_name}", "X-Content-Type-Options": "nosniff", "Cache-Control": "private, max-age=60"})
+    return FileResponse(path=path, media_type=item.content_type, headers={"Content-Disposition": f"inline; filename*=UTF-8''{encoded_name}", "X-Content-Type-Options": "nosniff", "Cache-Control": "public, max-age=60"})
 
 
 @router.get("")
