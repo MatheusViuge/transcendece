@@ -20,6 +20,9 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-edutech_user}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-edutech_db}
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:?JWT_SECRET_KEY must be set}
+      FILE_STORAGE_ROOT: /app/storage/uploads
+    volumes:
+      - file_storage:/app/storage/uploads
     depends_on:
       db:
         condition: service_healthy
@@ -64,4 +67,5 @@ services:
 
 volumes:
   postgres_data:
+  file_storage:
   tls_certs:

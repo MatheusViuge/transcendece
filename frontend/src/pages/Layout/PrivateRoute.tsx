@@ -10,7 +10,7 @@ export function PrivateRoute() {
     const pathname = useLocation().pathname;
     const requiredRole = getRequiredRole(pathname);
 
-    if (loading) return <Loader />;
+    if (loading && !user) return <Loader />;
     if (!requiredRole) return <Layout />;
     if (!isAuthenticated) return <Navigate to="/login" replace />;
 

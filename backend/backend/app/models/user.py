@@ -15,7 +15,6 @@ class Usuario(Base):
     Representa a tabela 'usuarios' no banco de dados.
     Armazena dados de identificação, autenticação e perfil do usuário.
     """
-    # NOME DA TABELA
     __tablename__ = "usuarios"
     __table_args__ = (
         CheckConstraint(
@@ -24,72 +23,20 @@ class Usuario(Base):
         ),
     )
 
-    # COLUNAS
-    # Informações básicas do usuário
-    id = Column(
-        Integer,
-        primary_key=True,
-        index=True,
-        autoincrement=True,
-    )
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     nome = Column(String(45), nullable=False)
     sobrenome = Column(String(45), nullable=False)
     data_nascimento = Column(Date, nullable=False)
     email = Column(String(100), nullable=False, unique=True)
     senha_hash = Column(String(255), nullable=False)
-
-    # Perfil/autorização do usuário
     tipo_usuario = Column(String(20), nullable=False, default="aluno")
     is_active = Column(Boolean, nullable=False, default=True, server_default="true")
+    data_cadastro = Column(DateTime, nullable=False, server_default=func.now())
+    ultimo_login = Column(DateTime, nullable=True)
+    ultima_atualizacao = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
 
-    # CONTROLE DE DATA/HISTÓRICO
-    # data de criação do registro do usuário
-    data_cadastro = Column(
-        DateTime,
-        nullable=False,
-        server_default=func.now(),
-    )
-
-    # data do último login autenticado pelo usuário
-    ultimo_login = Column(
-        DateTime,
-        nullable=True,
-    )
-
-    # data da última atualização do perfil do usuário
-    ultima_atualizacao = Column(
-        DateTime(timezone=True),
-        nullable=False,
-        server_default=func.now(),
-        onupdate=func.now(),
-    )
-
-    # RELACIONAMENTOS
-    # Instrutor 1:1
-    # Se o usuário for do tipo "instrutor", este atributo aponta
-    # para o registro correspondente na tabela 'instrutores'.
-    instrutor = relationship(
-        "Instrutor",
-        back_populates="usuario",
-        uselist=False,  # garante relação 1:1
-    )
-
-    # Matricula 1:N → Um aluno pode ter várias matrículas
-    matriculas = relationship(
-        "Matricula",
-        back_populates="aluno",
-        cascade="all, delete-orphan",
-    )
-
-    # Avaliação 1:N → Um usuário pode fazer muitas avaliações
-    reviews_curso = relationship(
-        "AvaliacaoCurso",
-        back_populates="usuario"
-    )
-
-    # API Key 1:N → Um usuário pode administrar várias credenciais externas
-    api_keys = relationship(
-        "ApiKey",
-        back_populates="owner",
-        cascade="all, delete-orphan",
-    )
+    instrutor = relationship("Instrutor", back_populates="usuario", uselist=False)
+    matriculas = relationship("Matricula", back_populates="aluno", cascade="all, delete-orphan")
+    reviews_curso = relationship("AvaliacaoCurso", back_populates="usuario")
+    api_keys = relationship("ApiKey", back_populates="owner", cascade="all, delete-orphan")
+    uploaded_files = relationship("UploadedFile", back_populates="owner", cascade="all, delete-orphan")

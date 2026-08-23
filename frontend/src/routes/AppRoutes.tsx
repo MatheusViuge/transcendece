@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 
 import AdminUsers from "@/pages/Admin/Users";
 import DashboardAluno from "@/pages/Aluno/Dashboard";
+import Files from "@/pages/Files";
 import NotFound from "@/pages/NotFound";
 import PaginaEmConstrucao from "@/pages/PaginaEmConstrucao";
 import CourseDetails from "@/pages/Publico/CourseDetails";
@@ -14,13 +15,6 @@ import Register from "@/pages/Publico/Register";
 import TermsOfService from "@/pages/Publico/TermsOfService";
 import { PrivateRoute } from "@/pages/Layout/PrivateRoute";
 
-/**
- * Single routing composition point for the React application.
- *
- * Authentication/role enforcement remains in PrivateRoute while the route tree
- * only describes navigation and page composition. Backend authorization remains
- * authoritative for protected API operations.
- */
 export function AppRoutes() {
     return (
         <Routes>
@@ -45,6 +39,7 @@ export function AppRoutes() {
                     <Route path="cursos" element={<PaginaEmConstrucao />} />
                     <Route path="cursos/:id/editar" element={<PaginaEmConstrucao />} />
                     <Route path="correcoes" element={<PaginaEmConstrucao />} />
+                    <Route path="arquivos" element={<Files />} />
                 </Route>
 
                 <Route path="/aluno">
@@ -54,6 +49,7 @@ export function AppRoutes() {
                     <Route path="cursos/:id" element={<CourseDetails />} />
                     <Route path="cursos/:id/aulas" element={<PaginaEmConstrucao />} />
                     <Route path="certificados" element={<PaginaEmConstrucao />} />
+                    <Route path="arquivos" element={<Files />} />
                 </Route>
 
                 <Route path="/admin">
@@ -63,6 +59,7 @@ export function AppRoutes() {
                     <Route path="cursos" element={<PaginaEmConstrucao />} />
                     <Route path="cursos/:id/editar" element={<PaginaEmConstrucao />} />
                     <Route path="solicitacoes" element={<PaginaEmConstrucao />} />
+                    <Route path="arquivos" element={<Files />} />
                 </Route>
 
                 <Route path="*" element={<NotFound />} />
