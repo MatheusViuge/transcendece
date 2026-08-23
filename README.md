@@ -373,8 +373,8 @@ The table below starts as a delivery roadmap. **Change each status only when the
 | Public API | Planned module | API-key secured CRUD-style API with rate limiting and docs | TODO |
 | Advanced Permissions | Planned module | User CRUD, role management, protected actions/views | TODO |
 | File Upload & Management | Planned module | Validated upload, preview/progress, secure access and delete | TODO |
-| User Profiles | Planned module | Editable profiles, avatars/default avatars | TODO |
-| Friends and presence | Planned module | Friends list plus online/offline status | TODO |
+| User Profiles | Implemented in PR #125 | Editable profiles, avatars/default avatars | TODO final attribution |
+| Friends and presence | Implemented in PR #125 | Friends add/remove/list plus timeout-based online/offline status | TODO final attribution |
 | Chat | Planned module | Direct user messaging | TODO |
 | Real-time updates | Planned module | WebSocket-based live updates and broadcasting | TODO |
 | PWA | Planned module | Installability and offline behavior | TODO |
@@ -406,7 +406,7 @@ The project requires at least **14 validated module points**. The current roadma
 | Public API | Major | 2 | Secured API keys, rate limiting, documentation and at least five GET/POST/PUT/DELETE endpoints | TODO | Planned |
 | Advanced Permissions | Major | 2 | User CRUD, role management and role-based backend/frontend actions | TODO | Planned |
 | File Upload & Management | Minor | 1 | Multi-type uploads with type/size validation, secure storage, preview, progress and deletion | TODO | Planned |
-| Standard User Management | Major | 2 | Profile editing, avatars/default avatar, friends, online status and public profile pages | TODO | Planned |
+| Standard User Management | Major | 2 | Profile editing, avatars/default avatar, friends, online status and public profile pages | TODO final attribution | Implemented in PR #125; Gate #268 green |
 | User Interaction | Major | 2 | Basic chat, profile interactions and friend add/remove/list flows | TODO | Planned |
 | Real-time WebSockets | Major | 2 | Connection lifecycle, authenticated clients, live broadcasts and graceful disconnects | TODO | Planned |
 | Advanced Analytics Dashboard | Major | 2 | Interactive charts, real-time data, date/filter customization and CSV/PDF exports | TODO | Planned |
