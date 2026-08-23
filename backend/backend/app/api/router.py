@@ -13,6 +13,7 @@ from app.routers import (
     level,
     public_api,
     search,
+    users,
 )
 
 api_router = APIRouter()
@@ -26,6 +27,7 @@ for router in (
     search.router,
     public_api.router,
     files.router,
+    users.router,
     course.router,
     instructor.router,
     evaluation.router,
