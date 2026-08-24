@@ -39,6 +39,14 @@ History uses cursor pagination with `before_id`. The API reads messages newest-f
 
 Message responses expose `event: "chat.message.created"`. Epic #31 can publish the same payload over authenticated WebSockets without changing persistence or the frontend message contract.
 
+### Session/logout boundary
+
+The authenticated Navbar exposes a visible **Sair** action. It stays visually secondary by default and only gains destructive emphasis on pointer hover or keyboard focus so logout remains discoverable without competing with the primary navigation.
+
+Logout removes the authentication token from the browser's known auth storage locations, clears the current user from `UserContext`, and redirects to `/login`. The implementation intentionally does not call `localStorage.clear()` or clear the PWA Cache Storage because those stores can contain non-user technical state.
+
+In the current Epic, chat history is component-local state; leaving the authenticated route unmounts the chat and destroys that in-memory state. Epic #31 must preserve this session boundary when introducing a conversation cache and WebSocket state: cache/socket state from one identity must never survive into another authenticated identity.
+
 ## Endpoints
 
 - `POST /api/chat/conversations` — create or return a direct conversation by `recipient_id`;
@@ -58,7 +66,9 @@ Message responses expose `event: "chat.message.created"`. Epic #31 can publish t
 - the conversation header opens the participant profile;
 - another user's profile exposes **Conversar**;
 - each friend entry exposes **Chat**;
-- friends can still be added/removed through the profile flow from Epic #29.
+- friends can still be added/removed through the profile flow from Epic #29;
+- authenticated navigation always exposes **Sair** outside the horizontally scrollable role-link area;
+- logout clears the auth token/current user and returns the browser to `/login`.
 
 ## Automated coverage
 
@@ -73,7 +83,7 @@ Message responses expose `event: "chat.message.created"`. Epic #31 can publish t
 - empty and oversized message rejection;
 - persisted rows in the database.
 
-`scripts/user-interaction-check.sh` guards the required models/routes/migration/frontend integration.
+`scripts/user-interaction-check.sh` guards the required models/routes/migration/frontend integration, including the logout action and auth-storage cleanup contract.
 
 `scripts/user-interaction-smoke.sh` executes the real HTTPS/PostgreSQL/Docker flow with seeded users Alice, Camila and Bernardo. It creates a conversation, sends messages in both directions, rejects Bernardo as a third-party intruder, validates pagination/listing, restarts the backend container, then confirms the messages still exist.
 
@@ -89,9 +99,12 @@ Message responses expose `event: "chat.message.created"`. Epic #31 can publish t
 8. Open the participant profile from the chat header.
 9. Add/remove the user as a friend and verify the social state after refresh.
 10. Generate enough messages to use **Carregar anteriores** and verify order remains chronological.
-11. Confirm the browser console has no relevant JavaScript errors.
-12. Repeat the layout check at mobile and desktop widths.
+11. Verify **Sair** remains visible in the authenticated Navbar, appears muted at rest, and gains the danger highlight on hover/focus.
+12. Click **Sair**; verify the app redirects to `/login`, the authenticated Navbar disappears, and the `token` key is absent from `localStorage` and `sessionStorage`.
+13. Log in as a different seeded user and verify no previous authenticated chat UI/state is visible before that user's own data is requested.
+14. Confirm the browser console has no relevant JavaScript errors.
+15. Repeat the layout check at mobile and desktop widths.
 
 ## Expected future change in Epic #31
 
-The **Atualizar** action is deliberately explicit in this Epic. Epic #31 will add authenticated WebSocket lifecycle, scoped room broadcasting, reconnect/cleanup and immediate message/presence updates. REST remains the durable persistence and history fallback.
+The **Atualizar** action is deliberately explicit in this Epic. Epic #31 will add authenticated WebSocket lifecycle, scoped room broadcasting, reconnect/cleanup and immediate message/presence updates. REST remains the durable persistence and history fallback. Any cache introduced there must be scoped to the authenticated `user.id` and cleared together with the socket/realtime state on logout or identity change.
