@@ -23,7 +23,7 @@ type ChatMessage = {
     sender_id: number;
     content: string;
     created_at: string;
-    event: "chat.message.created";
+    event: string;
 };
 
 type Conversation = {
