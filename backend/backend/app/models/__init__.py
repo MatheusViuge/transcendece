@@ -14,3 +14,4 @@ from .level import Nivel
 from .api_key import ApiKey
 from .uploaded_file import UploadedFile
 from .friendship import Friendship
+from .chat import Conversation, ChatMessage
