@@ -41,6 +41,10 @@ print(data['id'])
 PY
 )
 
+default_avatar_status=$(curl --silent --show-error --insecure --output /dev/null --write-out '%{http_code}' \
+  "$BASE_URL/api/users/$ALICE_ID/avatar")
+test "$default_avatar_status" = "307"
+
 curl --silent --show-error --fail --insecure \
   -H "Authorization: Bearer $CAMILA_TOKEN" \
   "$BASE_URL/api/users/me" -o /tmp/um-camila.json
@@ -122,8 +126,8 @@ with open('/tmp/um-avatar-selected.json', encoding='utf-8') as handle:
 assert data['avatar_url'] == f'/api/users/{sys.argv[1]}/avatar'
 PY
 
+# Browser-like <img src> request: deliberately no Authorization header.
 curl --silent --show-error --fail --insecure \
-  -H "Authorization: Bearer $CAMILA_TOKEN" \
   "$BASE_URL/api/users/$ALICE_ID/avatar" -o /tmp/um-avatar-returned.png
 cmp /tmp/um-avatar.png /tmp/um-avatar-returned.png
 
