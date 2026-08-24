@@ -31,21 +31,26 @@ def populate(db) -> dict[str, int]:
     if len(students) < 4 or len(courses) < 4:
         raise RuntimeError("Advanced Search seed não forneceu dados suficientes para Analytics.")
 
+    distinct_pairs = [
+        (student, course)
+        for student in students
+        for course in courses
+    ]
+    if len(distinct_pairs) < 24:
+        raise RuntimeError("Analytics precisa de pelo menos 24 pares aluno/curso distintos no seed.")
+
     statuses = ("ativa", "concluida", "cancelada")
     enrollment_count = 0
-    for index in range(24):
-        student = students[index % len(students)]
-        course = courses[(index * 3) % len(courses)]
+    for index, (student, course) in enumerate(distinct_pairs[:24]):
         enrollment = (
             db.query(Matricula)
             .filter(Matricula.aluno_id == student.id, Matricula.curso_id == course.id)
             .first()
         )
-        # The deterministic pair pattern can repeat; skip instead of creating a
-        # duplicate so the seed remains idempotent under the DB UNIQUE contract.
         if enrollment is None:
             enrollment = Matricula(aluno_id=student.id, curso_id=course.id)
             db.add(enrollment)
+
         status_value = statuses[index % len(statuses)]
         enrollment.status_matricula = status_value
         enrollment.data_matricula = now - timedelta(days=(index % 21), hours=index % 8)
