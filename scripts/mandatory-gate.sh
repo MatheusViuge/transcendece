@@ -30,6 +30,12 @@ sh scripts/clean-install-smoke.sh
 info "Running backend regression suite inside the deployed backend image"
 docker compose exec -T backend pytest
 
+info "Running User Interaction structural/security check"
+sh scripts/user-interaction-check.sh
+
+info "Running User Interaction HTTPS multi-user smoke"
+sh scripts/user-interaction-smoke.sh
+
 info "Verifying Alembic has a single head and database is current"
 HEAD_COUNT=$(docker compose exec -T backend sh -c "alembic heads | grep -c '(head)'" || true)
 [ "$HEAD_COUNT" = "1" ] || fail "expected exactly one Alembic head, got $HEAD_COUNT"
