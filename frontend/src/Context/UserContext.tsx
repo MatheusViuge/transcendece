@@ -7,6 +7,13 @@ type LoginResponse = {
     token_type: string;
 };
 
+const AUTH_STORAGE_KEY = "token";
+
+function clearAuthStorage() {
+    localStorage.removeItem(AUTH_STORAGE_KEY);
+    sessionStorage.removeItem(AUTH_STORAGE_KEY);
+}
+
 export function UserProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<IUserStorage | null>(null);
     const [loading, setLoading] = useState(true);
@@ -19,7 +26,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
             setUser(responseAuth.data);
         } catch (error) {
             setUser(null);
-            localStorage.removeItem("token");
+            clearAuthStorage();
             throw error;
         } finally {
             setLoading(false);
@@ -27,7 +34,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     }, []);
 
     useEffect(() => {
-        const token = localStorage.getItem("token");
+        const token = localStorage.getItem(AUTH_STORAGE_KEY);
 
         if (!token) {
             setLoading(false);
@@ -41,7 +48,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
     useEffect(() => {
         const refreshOnFocus = () => {
-            if (!localStorage.getItem("token")) return;
+            if (!localStorage.getItem(AUTH_STORAGE_KEY)) return;
             void authMe().catch(() => undefined);
         };
 
@@ -63,10 +70,10 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
                 throw new Error("Token de autenticação não retornado pela API.");
             }
 
-            localStorage.setItem("token", token);
+            localStorage.setItem(AUTH_STORAGE_KEY, token);
             await authMe();
         } catch (error) {
-            localStorage.removeItem("token");
+            clearAuthStorage();
             setUser(null);
             catchCustom(error);
         } finally {
@@ -75,7 +82,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     };
 
     const logout = () => {
-        localStorage.removeItem("token");
+        clearAuthStorage();
         setUser(null);
         setLoading(false);
     };
