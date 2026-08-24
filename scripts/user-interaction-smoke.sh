@@ -17,7 +17,7 @@ login() {
     rm -f "$body"
     exit 1
   fi
-  python - "$body" <<'PY'
+  python3 - "$body" <<'PY'
 import json, sys
 with open(sys.argv[1], encoding='utf-8') as handle:
     print(json.load(handle)['data']['access_token'])
@@ -29,7 +29,7 @@ user_id() {
   token=$1
   curl --silent --show-error --fail --insecure \
     -H "Authorization: Bearer $token" \
-    "$BASE_URL/api/users/me" | python -c 'import json,sys; print(json.load(sys.stdin)["data"]["id"])'
+    "$BASE_URL/api/users/me" | python3 -c 'import json,sys; print(json.load(sys.stdin)["data"]["id"])'
 }
 
 ALICE_TOKEN=$(login alice.ferreira@seed.example.com)
@@ -44,7 +44,7 @@ conversation_status=$(curl --silent --show-error --insecure --output /tmp/ui-con
   -d "{\"recipient_id\":$CAMILA_ID}" \
   "$BASE_URL/api/chat/conversations")
 case "$conversation_status" in 200|201) ;; *) cat /tmp/ui-conversation.json >&2; exit 1 ;; esac
-CONVERSATION_ID=$(python - <<'PY'
+CONVERSATION_ID=$(python3 - <<'PY'
 import json
 with open('/tmp/ui-conversation.json', encoding='utf-8') as handle:
     print(json.load(handle)['data']['id'])
@@ -57,7 +57,7 @@ inverse_status=$(curl --silent --show-error --insecure --output /tmp/ui-inverse.
   -d "{\"recipient_id\":$ALICE_ID}" \
   "$BASE_URL/api/chat/conversations")
 test "$inverse_status" = "200"
-python - "$CONVERSATION_ID" <<'PY'
+python3 - "$CONVERSATION_ID" <<'PY'
 import json, sys
 with open('/tmp/ui-inverse.json', encoding='utf-8') as handle:
     assert json.load(handle)['data']['id'] == int(sys.argv[1])
@@ -97,7 +97,7 @@ test "$empty_status" = "422"
 curl --silent --show-error --fail --insecure \
   -H "Authorization: Bearer $ALICE_TOKEN" \
   "$BASE_URL/api/chat/conversations/$CONVERSATION_ID/messages?limit=1" -o /tmp/ui-page.json
-python - <<'PY'
+python3 - <<'PY'
 import json
 with open('/tmp/ui-page.json', encoding='utf-8') as handle:
     data = json.load(handle)['data']
@@ -110,7 +110,7 @@ PY
 curl --silent --show-error --fail --insecure \
   -H "Authorization: Bearer $ALICE_TOKEN" \
   "$BASE_URL/api/chat/conversations" -o /tmp/ui-list.json
-python - "$CAMILA_ID" "$CONVERSATION_ID" <<'PY'
+python3 - "$CAMILA_ID" "$CONVERSATION_ID" <<'PY'
 import json, sys
 camila_id, conversation_id = map(int, sys.argv[1:])
 with open('/tmp/ui-list.json', encoding='utf-8') as handle:
@@ -121,19 +121,19 @@ assert row['last_message']['content'] == 'Camila para Alice - resposta persisten
 PY
 
 # Persistence is verified against the real PostgreSQL deployment by restarting only the backend.
-docker compose restart backend >/dev/null
+docker-compose restart backend >/dev/null
 for attempt in $(seq 1 45); do
   if curl --silent --show-error --fail --insecure "$BASE_URL/api/status" | grep -Eq '"status"[[:space:]]*:[[:space:]]*"ok"'; then
     break
   fi
-  [ "$attempt" -eq 45 ] && { docker compose logs --tail=120 backend >&2; exit 1; }
+  [ "$attempt" -eq 45 ] && { docker-compose logs --tail=120 backend >&2; exit 1; }
   sleep 2
 done
 
 curl --silent --show-error --fail --insecure \
   -H "Authorization: Bearer $ALICE_TOKEN" \
   "$BASE_URL/api/chat/conversations/$CONVERSATION_ID/messages?limit=10" -o /tmp/ui-after-restart.json
-python - <<'PY'
+python3 - <<'PY'
 import json
 with open('/tmp/ui-after-restart.json', encoding='utf-8') as handle:
     contents = [item['content'] for item in json.load(handle)['data']['items']]
