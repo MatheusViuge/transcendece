@@ -2,7 +2,7 @@ NAME = transcendence
 COMPOSE = docker compose
 COMPOSE_FILE = docker-compose.yml
 ENV_FILE = .env
-COMPOSE_CMD = $(COMPOSE) --env-file $(ENV_FILE) -f $(COMPOSE_FILE)
+COMPOSE_CMD = $(COMPOSE) -f $(COMPOSE_FILE)
 
 GREEN = \033[0;32m
 YELLOW = \033[0;33m
