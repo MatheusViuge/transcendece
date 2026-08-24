@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 
 import AdminUsers from "@/pages/Admin/Users";
 import DashboardAluno from "@/pages/Aluno/Dashboard";
+import Chat from "@/pages/Chat";
 import Files from "@/pages/Files";
 import NotFound from "@/pages/NotFound";
 import PaginaEmConstrucao from "@/pages/PaginaEmConstrucao";
@@ -36,6 +37,7 @@ export function AppRoutes() {
 
                 <Route path="/perfil" element={<Profile />} />
                 <Route path="/usuarios/:userId" element={<Profile />} />
+                <Route path="/chat" element={<Chat />} />
 
                 <Route path="/instrutor">
                     <Route index element={<Navigate to="/instrutor/dashboard" replace />} />
