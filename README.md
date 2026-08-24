@@ -375,7 +375,7 @@ The table below starts as a delivery roadmap. **Change each status only when the
 | File Upload & Management | Planned module | Validated upload, preview/progress, secure access and delete | TODO |
 | User Profiles | Implemented in PR #125 | Editable profiles, avatars/default avatars | TODO final attribution |
 | Friends and presence | Implemented in PR #125 | Friends add/remove/list plus timeout-based online/offline status | TODO final attribution |
-| Chat | Planned module | Direct user messaging | TODO |
+| Chat | Implemented in PR #126 (pending review) | Persistent direct messaging, private history pagination and profile/friend integration | TODO final attribution |
 | Real-time updates | Planned module | WebSocket-based live updates and broadcasting | TODO |
 | PWA | Planned module | Installability and offline behavior | TODO |
 | Design System | Planned module | Reusable documented visual/component system | TODO |
@@ -407,7 +407,7 @@ The project requires at least **14 validated module points**. The current roadma
 | Advanced Permissions | Major | 2 | User CRUD, role management and role-based backend/frontend actions | TODO | Planned |
 | File Upload & Management | Minor | 1 | Multi-type uploads with type/size validation, secure storage, preview, progress and deletion | TODO | Planned |
 | Standard User Management | Major | 2 | Profile editing, avatars/default avatar, friends, online status and public profile pages | TODO final attribution | Implemented in PR #125; Gate #268 green |
-| User Interaction | Major | 2 | Basic chat, profile interactions and friend add/remove/list flows | TODO | Planned |
+| User Interaction | Major | 2 | Basic chat, profile interactions and friend add/remove/list flows | TODO final attribution | Implemented in PR #126; pending final gate/review |
 | Real-time WebSockets | Major | 2 | Connection lifecycle, authenticated clients, live broadcasts and graceful disconnects | TODO | Planned |
 | Advanced Analytics Dashboard | Major | 2 | Interactive charts, real-time data, date/filter customization and CSV/PDF exports | TODO | Planned |
 | **TOTAL** |  | **19** |  |  |  |
@@ -452,7 +452,7 @@ Profiles, avatars, friends and presence transform authentication into a complete
 
 #### User Interaction — Major — 2 pts
 
-Messaging, profiles and friendship interactions make the learning platform collaborative rather than purely content-driven.
+The implementation uses canonical two-user conversations and persistent messages with participant-only authorization and cursor-paginated history. The React chat integrates avatar/presence, profile navigation and friend flows, while keeping durable REST persistence as the foundation for the WebSocket transport added by the next Epic.
 
 #### Real-time WebSockets — Major — 2 pts
 
