@@ -110,7 +110,9 @@ def test_presence_hidden_until_friendship_is_accepted(client):
     alice = _login(client, "alice.ferreira@seed.example.com")
     camila = _login(client, "camila.nunes@seed.example.com")
     alice_profile = client.get("/users/me", headers=alice).json()["data"]
+    camila_profile = client.get("/users/me", headers=camila).json()["data"]
     alice_id = alice_profile["id"]
+    camila_id = camila_profile["id"]
     alice_code = alice_profile["friend_code"]
 
     assert client.post("/users/presence/heartbeat", headers=alice).status_code == 200
@@ -124,7 +126,7 @@ def test_presence_hidden_until_friendship_is_accepted(client):
     assert "email" not in search.json()["data"][0]
 
     assert client.post(f"/users/friend-requests/{alice_id}", headers=camila).status_code == 201
-    assert client.post(f"/users/friend-requests/{camila.json if False else client.get('/users/me', headers=camila).json()['data']['id']}/accept", headers=alice).status_code == 201
+    assert client.post(f"/users/friend-requests/{camila_id}/accept", headers=alice).status_code == 201
 
     friend_view = client.get(f"/users/{alice_id}", headers=camila).json()["data"]
     assert friend_view["online"] is True
