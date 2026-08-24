@@ -13,11 +13,12 @@ from sqlalchemy.orm import Session
 from app.core.response import success_response
 from app.core.security import allowed_roles
 from app.database import get_db
-from app.models.friendship import Friendship
+from app.models.friendship import FriendRequest, Friendship
 from app.models.uploaded_file import UploadedFile
 from app.models.user import Usuario
 from app.schemas.user import UsuarioAtualizarParcial
 from app.services.file_storage import remove_stored_file, stored_path
+from app.services.friend_code import normalize_friend_code
 
 router = APIRouter(prefix="/users", tags=["User Management"])
 PRESENCE_TTL = timedelta(seconds=90)
@@ -47,21 +48,22 @@ def _avatar_url(user: Usuario) -> str:
     return DEFAULT_AVATAR_URL if user.avatar_file_id is None else f"/api/users/{user.id}/avatar"
 
 
-def _public_payload(user: Usuario) -> dict[str, object]:
+def _public_payload(user: Usuario, *, online: bool | None = None) -> dict[str, object]:
     return {
         "id": user.id,
         "nome": user.nome,
         "sobrenome": user.sobrenome,
         "tipo_usuario": user.tipo_usuario,
         "data_cadastro": user.data_cadastro,
+        "friend_code": user.friend_code,
         "avatar_url": _avatar_url(user),
-        "online": _is_online(user),
+        "online": online,
     }
 
 
 def _private_payload(user: Usuario) -> dict[str, object]:
     return {
-        **_public_payload(user),
+        **_public_payload(user, online=_is_online(user)),
         "email": user.email,
         "data_nascimento": user.data_nascimento,
         "ultimo_login": user.ultimo_login,
@@ -75,6 +77,35 @@ def _pair(first_id: int, second_id: int) -> tuple[int, int]:
 
 def _friendship_query(db: Session, user_id: int):
     return db.query(Friendship).filter(or_(Friendship.user_low_id == user_id, Friendship.user_high_id == user_id))
+
+
+def _friendship(db: Session, first_id: int, second_id: int) -> Friendship | None:
+    low_id, high_id = _pair(first_id, second_id)
+    return db.query(Friendship).filter(Friendship.user_low_id == low_id, Friendship.user_high_id == high_id).first()
+
+
+def _friend_request(db: Session, first_id: int, second_id: int) -> FriendRequest | None:
+    low_id, high_id = _pair(first_id, second_id)
+    return db.query(FriendRequest).filter(FriendRequest.user_low_id == low_id, FriendRequest.user_high_id == high_id).first()
+
+
+def _visible_online(db: Session, viewer_id: int, user: Usuario) -> bool | None:
+    if viewer_id == user.id or _friendship(db, viewer_id, user.id) is not None:
+        return _is_online(user)
+    return None
+
+
+def _request_payload(db: Session, request: FriendRequest, own_id: int) -> dict[str, object]:
+    other_id = request.user_high_id if request.user_low_id == own_id else request.user_low_id
+    other = _get_active_user(db, other_id)
+    incoming = request.requester_id != own_id
+    return {
+        "id": request.id,
+        "direction": "incoming" if incoming else "outgoing",
+        "requester_id": request.requester_id,
+        "created_at": request.created_at,
+        "user": _public_payload(other, online=None),
+    }
 
 
 @router.get("/me")
@@ -121,25 +152,106 @@ def list_friends(db: Session = Depends(get_db), identity=Depends(allowed_roles()
         return success_response(data=[], message="Amigos retornados com sucesso.")
     users = db.query(Usuario).filter(Usuario.id.in_(friend_ids), Usuario.is_active.is_(True)).all()
     by_id = {user.id: user for user in users}
-    return success_response(data=[_public_payload(by_id[item]) for item in friend_ids if item in by_id], message="Amigos retornados com sucesso.")
+    return success_response(
+        data=[_public_payload(by_id[item], online=_is_online(by_id[item])) for item in friend_ids if item in by_id],
+        message="Amigos retornados com sucesso.",
+    )
 
 
-@router.post("/friends/{user_id}", status_code=status.HTTP_201_CREATED)
-def add_friend(user_id: int, db: Session = Depends(get_db), identity=Depends(allowed_roles())):
+@router.get("/friend-requests")
+def list_friend_requests(db: Session = Depends(get_db), identity=Depends(allowed_roles())):
+    own_id = identity["id"]
+    rows = (
+        db.query(FriendRequest)
+        .filter(or_(FriendRequest.user_low_id == own_id, FriendRequest.user_high_id == own_id))
+        .order_by(FriendRequest.created_at.desc(), FriendRequest.id.desc())
+        .all()
+    )
+    payloads = [_request_payload(db, row, own_id) for row in rows]
+    return success_response(
+        data={
+            "incoming": [item for item in payloads if item["direction"] == "incoming"],
+            "outgoing": [item for item in payloads if item["direction"] == "outgoing"],
+        },
+        message="Solicitações de amizade retornadas com sucesso.",
+    )
+
+
+@router.post("/friend-requests/{user_id}", status_code=status.HTTP_201_CREATED)
+def request_friendship(user_id: int, db: Session = Depends(get_db), identity=Depends(allowed_roles())):
     own_id = identity["id"]
     if own_id == user_id:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Você não pode adicionar a si mesmo como amigo.")
-    friend = _get_active_user(db, user_id)
-    low_id, high_id = _pair(own_id, user_id)
-    if db.query(Friendship).filter(Friendship.user_low_id == low_id, Friendship.user_high_id == high_id).first() is not None:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Você não pode enviar solicitação para si mesmo.")
+    target = _get_active_user(db, user_id)
+    if _friendship(db, own_id, user_id) is not None:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Usuário já está na sua lista de amigos.")
+
+    existing = _friend_request(db, own_id, user_id)
+    if existing is not None:
+        if existing.requester_id == own_id:
+            detail = "Solicitação de amizade já enviada."
+        else:
+            detail = "Você já recebeu uma solicitação deste usuário. Aceite ou recuse a solicitação existente."
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=detail)
+
+    low_id, high_id = _pair(own_id, user_id)
+    request = FriendRequest(user_low_id=low_id, user_high_id=high_id, requester_id=own_id)
+    try:
+        db.add(request)
+        db.commit()
+        db.refresh(request)
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Já existe uma solicitação para este par de usuários.")
+    return success_response(
+        data=_request_payload(db, request, own_id),
+        message="Solicitação de amizade enviada.",
+        status_code=status.HTTP_201_CREATED,
+    )
+
+
+@router.post("/friend-requests/{user_id}/accept", status_code=status.HTTP_201_CREATED)
+def accept_friendship(user_id: int, db: Session = Depends(get_db), identity=Depends(allowed_roles())):
+    own_id = identity["id"]
+    if own_id == user_id:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Solicitação inválida.")
+    requester = _get_active_user(db, user_id)
+    request = _friend_request(db, own_id, user_id)
+    if request is None or request.requester_id != user_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Solicitação recebida não encontrada.")
+    if _friendship(db, own_id, user_id) is not None:
+        db.delete(request)
+        db.commit()
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Amizade já existe.")
+
+    low_id, high_id = _pair(own_id, user_id)
     try:
         db.add(Friendship(user_low_id=low_id, user_high_id=high_id))
+        db.delete(request)
         db.commit()
     except IntegrityError:
         db.rollback()
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Amizade já existe.")
-    return success_response(data=_public_payload(friend), message="Amigo adicionado com sucesso.", status_code=status.HTTP_201_CREATED)
+    return success_response(
+        data=_public_payload(requester, online=_is_online(requester)),
+        message="Solicitação aceita; amizade criada.",
+        status_code=status.HTTP_201_CREATED,
+    )
+
+
+@router.delete("/friend-requests/{user_id}")
+def remove_friend_request(user_id: int, db: Session = Depends(get_db), identity=Depends(allowed_roles())):
+    own_id = identity["id"]
+    request = _friend_request(db, own_id, user_id)
+    if request is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Solicitação de amizade não encontrada.")
+    outgoing = request.requester_id == own_id
+    db.delete(request)
+    db.commit()
+    return success_response(
+        data={"id": user_id},
+        message="Solicitação cancelada." if outgoing else "Solicitação recusada.",
+    )
 
 
 @router.delete("/friends/{user_id}")
@@ -211,16 +323,32 @@ def get_avatar(user_id: int, db: Session = Depends(get_db)):
 
 @router.get("")
 def search_users(q: str = Query(default="", max_length=80), limit: int = Query(default=20, ge=1, le=50), db: Session = Depends(get_db), identity=Depends(allowed_roles())):
-    query = db.query(Usuario).filter(Usuario.is_active.is_(True), Usuario.id != identity["id"])
+    base = db.query(Usuario).filter(Usuario.is_active.is_(True), Usuario.id != identity["id"])
     term = q.strip()
-    if term:
+    users: list[Usuario]
+    normalized_code = normalize_friend_code(term) if term else None
+    if normalized_code:
+        code_match = base.filter(Usuario.friend_code == normalized_code).first()
+        if code_match is not None:
+            users = [code_match]
+        else:
+            pattern = f"%{term}%"
+            users = base.filter(or_(Usuario.nome.ilike(pattern), Usuario.sobrenome.ilike(pattern))).order_by(Usuario.nome.asc(), Usuario.sobrenome.asc()).limit(limit).all()
+    elif term:
         pattern = f"%{term}%"
-        query = query.filter(or_(Usuario.nome.ilike(pattern), Usuario.sobrenome.ilike(pattern), Usuario.email.ilike(pattern)))
-    users = query.order_by(Usuario.nome.asc(), Usuario.sobrenome.asc()).limit(limit).all()
-    return success_response(data=[_public_payload(user) for user in users], message="Usuários retornados com sucesso.")
+        users = base.filter(or_(Usuario.nome.ilike(pattern), Usuario.sobrenome.ilike(pattern))).order_by(Usuario.nome.asc(), Usuario.sobrenome.asc()).limit(limit).all()
+    else:
+        users = base.order_by(Usuario.nome.asc(), Usuario.sobrenome.asc()).limit(limit).all()
+    return success_response(
+        data=[_public_payload(user, online=_visible_online(db, identity["id"], user)) for user in users],
+        message="Usuários retornados com sucesso.",
+    )
 
 
 @router.get("/{user_id}")
 def get_public_profile(user_id: int, db: Session = Depends(get_db), identity=Depends(allowed_roles())):
-    del identity
-    return success_response(data=_public_payload(_get_active_user(db, user_id)), message="Perfil público retornado com sucesso.")
+    user = _get_active_user(db, user_id)
+    return success_response(
+        data=_public_payload(user, online=_visible_online(db, identity["id"], user)),
+        message="Perfil público retornado com sucesso.",
+    )
