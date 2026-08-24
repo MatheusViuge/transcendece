@@ -4,6 +4,17 @@ set -eu
 BASE_URL=${BASE_URL:-https://localhost}
 PASSWORD=${SEED_PASSWORD:-SearchSeed42!}
 
+compose() {
+  if command -v docker-compose >/dev/null 2>&1; then
+    docker-compose "$@"
+  elif docker compose version >/dev/null 2>&1; then
+    docker compose "$@"
+  else
+    printf '%s\n' 'Docker Compose não encontrado (docker-compose ou docker compose).' >&2
+    exit 1
+  fi
+}
+
 login() {
   email=$1
   body=$(mktemp)
@@ -121,12 +132,12 @@ assert row['last_message']['content'] == 'Camila para Alice - resposta persisten
 PY
 
 # Persistence is verified against the real PostgreSQL deployment by restarting only the backend.
-docker-compose restart backend >/dev/null
+compose restart backend >/dev/null
 for attempt in $(seq 1 45); do
   if curl --silent --show-error --fail --insecure "$BASE_URL/api/status" | grep -Eq '"status"[[:space:]]*:[[:space:]]*"ok"'; then
     break
   fi
-  [ "$attempt" -eq 45 ] && { docker-compose logs --tail=120 backend >&2; exit 1; }
+  [ "$attempt" -eq 45 ] && { compose logs --tail=120 backend >&2; exit 1; }
   sleep 2
 done
 
