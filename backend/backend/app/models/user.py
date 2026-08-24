@@ -12,6 +12,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
 from app.database import Base
+from app.services.friend_code import generate_friend_code
 
 
 class Usuario(Base):
@@ -38,6 +39,7 @@ class Usuario(Base):
     ultima_atualizacao = Column(
         DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
     )
+    friend_code = Column(String(11), nullable=False, unique=True, index=True, default=generate_friend_code)
 
     avatar_file_id = Column(
         Integer,
