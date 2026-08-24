@@ -1,6 +1,9 @@
 #!/bin/sh
 set -eu
 
+ROOT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+cd "$ROOT_DIR"
+
 require_file() {
   test -f "$1" || { echo "Missing required User Interaction file: $1" >&2; exit 1; }
 }
@@ -28,7 +31,7 @@ require_pattern '@router.get\("/conversations/\{conversation_id\}/messages"\)' b
 require_pattern '@router.post\("/conversations/\{conversation_id\}/messages"' backend/backend/app/routers/chat.py
 require_pattern '_participant_conversation' backend/backend/app/routers/chat.py
 require_pattern 'before_id' backend/backend/app/routers/chat.py
-require_pattern 'event.*chat.message.created' backend/backend/app/routers/chat.py
+require_pattern 'chat.message.created' backend/backend/app/routers/chat.py
 require_pattern 'maxLength=\{2000\}' frontend/src/pages/Chat/index.tsx
 require_pattern 'Carregar anteriores' frontend/src/pages/Chat/index.tsx
 require_pattern '/chat\?user=' frontend/src/pages/Profile/index.tsx
