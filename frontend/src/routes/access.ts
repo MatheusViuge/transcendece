@@ -5,6 +5,7 @@ export type UiPermission =
     | "admin:users:read"
     | "admin:users:write"
     | "admin:roles:write"
+    | "admin:analytics:read"
     | "courses:manage"
     | "enrollments:self";
 
@@ -36,6 +37,7 @@ export const ROLE_NAV_LINKS: Record<UserRole, Array<{ label: string; to: string 
         { label: "Perfil", to: "/perfil" },
     ],
     admin: [
+        { label: "Analytics", to: "/admin/analytics" },
         { label: "Usuários", to: "/admin/usuarios" },
         { label: "Cursos", to: "/admin/cursos" },
         { label: "Chat", to: "/chat" },
@@ -47,7 +49,7 @@ export const ROLE_NAV_LINKS: Record<UserRole, Array<{ label: string; to: string 
 const UI_PERMISSIONS: Record<UserRole, ReadonlySet<UiPermission>> = {
     aluno: new Set(["enrollments:self"]),
     instrutor: new Set(["courses:manage"]),
-    admin: new Set(["admin:users:read", "admin:users:write", "admin:roles:write", "courses:manage"]),
+    admin: new Set(["admin:users:read", "admin:users:write", "admin:roles:write", "admin:analytics:read", "courses:manage"]),
 };
 
 const roleEntries = Object.entries(ROLE_BASE_PATHS) as Array<[UserRole, string]>;

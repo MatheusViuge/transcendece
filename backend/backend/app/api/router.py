@@ -2,6 +2,7 @@ from fastapi import APIRouter
 
 from app.routers import (
     admin,
+    analytics,
     api_keys,
     auth,
     category,
@@ -23,6 +24,8 @@ api_router = APIRouter()
 for router in (
     auth.router,
     admin.router,
+    analytics.router,
+    analytics.ws_router,
     api_keys.router,
     category.router,
     level.router,
