@@ -13,6 +13,7 @@ from app.routers import (
     instructor,
     level,
     public_api,
+    realtime,
     search,
     users,
 )
@@ -30,6 +31,7 @@ for router in (
     files.router,
     users.router,
     chat.router,
+    realtime.router,
     course.router,
     instructor.router,
     evaluation.router,
