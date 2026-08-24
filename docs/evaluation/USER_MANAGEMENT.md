@@ -20,6 +20,12 @@ This implementation targets the **Major: Standard user management and authentica
 
 Role, password and account-state changes are not accepted by the generic profile update endpoint.
 
+### Public Friend Code
+
+Each user owns a random, unique `friend_code` formatted as `ABCDE-FGHIJ`. The value is generated independently from email, database ID or other personal fields, and the database enforces uniqueness.
+
+User discovery accepts an exact Friend Code with or without the visual hyphen. Normal discovery remains available by name/surname; email is not used by the social search path.
+
 ### Avatar
 
 The module reuses the File Upload & Management infrastructure.
@@ -31,32 +37,46 @@ The module reuses the File Upload & Management infrastructure.
 
 Only PNG, JPEG and WebP can be selected as avatars. The upload must belong to the authenticated user. Replaced/removed avatar files are cleaned up. The default image is `frontend/public/default-avatar.svg`.
 
-### Friends
+### Friends and consent
 
-Friendship is represented by a canonical unordered pair (`user_low_id`, `user_high_id`) with a database unique constraint and `user_low_id < user_high_id` check. This makes the relation symmetric and prevents duplicate inverse rows.
+Accepted friendship remains represented by a canonical unordered pair (`user_low_id`, `user_high_id`) with a database unique constraint and `user_low_id < user_high_id` check. The relation is symmetric and duplicate inverse rows are impossible.
 
-- `GET /api/users/friends`
-- `POST /api/users/friends/{user_id}`
-- `DELETE /api/users/friends/{user_id}`
+Friendship creation is no longer unilateral. A pending request is represented by `FriendRequest`, also canonical per pair, while `requester_id` records who initiated it.
 
-Self-friendship is rejected and duplicate creation is protected both at application and database level.
+- `GET /api/users/friends` — accepted friends only.
+- `GET /api/users/friend-requests` — incoming/outgoing pending requests.
+- `POST /api/users/friend-requests/{user_id}` — send a request.
+- `POST /api/users/friend-requests/{user_id}/accept` — recipient accepts a request sent by `user_id`.
+- `DELETE /api/users/friend-requests/{user_id}` — recipient declines or requester cancels.
+- `DELETE /api/users/friends/{user_id}` — remove an accepted friendship.
 
-### Online status
+Self-requests, duplicate requests, inverse simultaneous requests and creation of a request for an existing friendship are rejected. There is deliberately no `POST /friends/{user_id}` shortcut capable of creating an accepted friendship without consent.
+
+Existing accepted friendships are preserved by migration `0007_friendship_privacy`.
+
+### Online status and privacy
 
 Presence is derived from `usuarios.last_seen_at` with a 90-second TTL instead of a permanent boolean. The authenticated frontend sends `POST /api/users/presence/heartbeat` every 30 seconds while a profile session is active.
 
-This provides safe behavior for multiple browser tabs: any active tab refreshes the same timestamp, and an abrupt browser/network loss naturally expires after the TTL. Real-time WebSocket presence events remain a responsibility of the separate WebSocket module; this module does not claim WebSockets.
+Presence is treated as relationship-scoped information:
+
+- the user can see their own presence state;
+- accepted friends can see each other's online/offline state;
+- search results, pending requests and public profiles of non-friends return `online: null`;
+- chat participant payloads also return `online: null` when the participants are not accepted friends.
+
+This prevents a user from converting public discovery into unilateral presence tracking. Real-time WebSocket presence events remain a responsibility of the separate WebSocket module and must preserve the same authorization rule.
 
 ## Frontend
 
 Routes:
 
-- `/perfil` — own profile, editing, avatar management, friends list and user discovery.
-- `/usuarios/:userId` — another user's profile with add/remove-friend action and status.
+- `/perfil` — own profile, editing, avatar management, Friend Code, accepted friends, pending requests and user discovery.
+- `/usuarios/:userId` — another user's profile with request/accept/decline/cancel/remove controls according to relationship state.
 
 Both routes require authentication. All roles receive a `Perfil` navigation entry.
 
-The profile UI includes loading/error/empty feedback, responsive layout, image upload progress, accessible labels and public/private field separation.
+The profile UI includes loading/error/empty feedback, responsive layout, image upload progress, accessible labels and public/private field separation. Non-friend presence is rendered as **Presença privada**, never as a fabricated offline state.
 
 ## Automated evidence
 
@@ -67,29 +87,34 @@ They cover:
 - profile update and persistence contract;
 - rejection of protected profile fields;
 - public-profile privacy;
-- friend add/remove/list, self-friend and duplicate rejection;
-- symmetric friendship consistency;
+- Friend Code format/uniqueness and exact-code discovery;
+- pending request send/list/accept/decline/cancel behavior;
+- prevention of unilateral friendship creation;
+- symmetric accepted-friendship consistency and removal;
+- presence hidden before acceptance and visible after acceptance;
 - heartbeat online state and timeout to offline;
 - default avatar, custom avatar selection, cross-user rendering and reset to default.
 
 Structural/security check: `scripts/user-management-check.sh`.
 
-HTTPS multi-user smoke: `scripts/user-management-smoke.sh`. It runs in the deployment gate through the existing File Upload HTTPS step because avatar management deliberately integrates with the File Upload module.
+HTTPS multi-user smoke: `scripts/user-management-smoke.sh`. It demonstrates discovery by Friend Code, hidden pre-consent presence, request/accept, visible friend presence, avatar behavior and removal returning presence to private.
 
 ## Manual Chrome demo
 
 1. Start from a clean `docker compose up --build` environment.
-2. Sign in as Alice and open `/perfil`.
-3. Edit profile fields, refresh the page and confirm persistence.
-4. Confirm the default avatar.
-5. Upload a PNG/JPEG/WebP avatar, observe progress, select it and refresh.
-6. Open another session as Camila.
-7. Search for Alice, add her as a friend and confirm the relationship appears for both users.
-8. Open Alice's public profile and confirm email/birth date are absent.
-9. Keep Alice active and confirm online status; stop her heartbeat/session and wait past the 90-second TTL to demonstrate offline status.
-10. Remove the friendship.
-11. Remove Alice's avatar and confirm fallback to the default avatar.
+2. Sign in as Alice and open `/perfil`; copy her Friend Code.
+3. Open another session as Camila and search Alice by the Friend Code.
+4. Confirm Alice's presence is shown as private before friendship.
+5. Send a friendship request and confirm neither side is yet listed as an accepted friend.
+6. In Alice's session, verify the incoming request and accept it.
+7. Confirm the relationship appears for both users and online/offline presence is now visible.
+8. Remove the friendship and confirm presence becomes private again.
+9. Exercise decline and cancel paths with another seeded user.
+10. Edit profile fields and confirm persistence after refresh.
+11. Upload/remove an avatar and confirm public rendering/default fallback.
+12. Confirm public profiles do not expose email or birth date.
+13. Confirm the browser console has no relevant warnings/errors.
 
 ## Scope boundary
 
-The Standard User Management module provides profile, avatar, friendship and online-status functionality required by its subject entry. Instant push updates for presence/chat are intentionally not claimed here; those belong to the separate Real-time WebSocket module.
+The consent/Friend Code changes are a privacy hardening hotfix around the existing Standard User Management behavior; they do not claim additional subject points. Blocking, followers, close-friends groups and push notifications are intentionally outside this hotfix.
