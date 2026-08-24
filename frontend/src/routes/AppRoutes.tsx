@@ -5,6 +5,7 @@ import DashboardAluno from "@/pages/Aluno/Dashboard";
 import Files from "@/pages/Files";
 import NotFound from "@/pages/NotFound";
 import PaginaEmConstrucao from "@/pages/PaginaEmConstrucao";
+import Profile from "@/pages/Profile";
 import CourseDetails from "@/pages/Publico/CourseDetails";
 import DesignSystem from "@/pages/Publico/DesignSystem";
 import Explore from "@/pages/Publico/Explore";
@@ -32,6 +33,9 @@ export function AppRoutes() {
                 <Route path="/privacidade" element={<PrivacyPolicy />} />
                 <Route path="/termos" element={<TermsOfService />} />
                 <Route path="/design-system" element={<DesignSystem />} />
+
+                <Route path="/perfil" element={<Profile />} />
+                <Route path="/usuarios/:userId" element={<Profile />} />
 
                 <Route path="/instrutor">
                     <Route index element={<Navigate to="/instrutor/dashboard" replace />} />

@@ -30,6 +30,13 @@ def _is_public_request(request: Request, normalized_path: str) -> bool:
     if request.method != "GET":
         return False
 
+    if normalized_path.startswith("/users/"):
+        parts = normalized_path.split("/")
+        if len(parts) == 4 and parts[2].isdigit() and parts[3] == "avatar":
+            # Browser <img> requests do not carry the JWT stored by the SPA.
+            # Only the explicitly selected profile avatar is exposed by this route.
+            return True
+
     if normalized_path.startswith("/courses/"):
         parts = normalized_path.split("/")
 

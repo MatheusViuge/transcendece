@@ -13,6 +13,12 @@ SenhaType = Annotated[str, Field(min_length=6, max_length=128, description="Senh
 EmailType = Annotated[EmailStr, Field(description="Email válido")]
 
 
+def _validate_birth_date(value: Optional[date]) -> Optional[date]:
+    if value is not None and value >= date.today():
+        raise ValueError("A data de nascimento deve estar no passado.")
+    return value
+
+
 class UsuarioCriar(StrictInputModel):
     nome: NomeType
     sobrenome: SobrenomeType
@@ -34,9 +40,7 @@ class UsuarioCriar(StrictInputModel):
     @field_validator("data_nascimento")
     @classmethod
     def validar_data_nascimento(cls, value: date) -> date:
-        if value >= date.today():
-            raise ValueError("A data de nascimento deve estar no passado.")
-        return value
+        return _validate_birth_date(value)  # type: ignore[return-value]
 
 
 class UsuarioResponse(BaseModel):
@@ -51,6 +55,21 @@ class UsuarioResponse(BaseModel):
     ultimo_login: Optional[datetime]
 
 
+class UsuarioPerfilResponse(UsuarioResponse):
+    data_nascimento: date
+    ultima_atualizacao: datetime
+
+
+class UsuarioPerfilPublicoResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    nome: NomeType
+    sobrenome: SobrenomeType
+    tipo_usuario: TipoUser
+    data_cadastro: datetime
+
+
 class UsuarioAtualizarTudo(StrictInputModel):
     nome: NomeType
     sobrenome: SobrenomeType
@@ -60,9 +79,7 @@ class UsuarioAtualizarTudo(StrictInputModel):
     @field_validator("data_nascimento")
     @classmethod
     def validar_data_nascimento(cls, value: date) -> date:
-        if value >= date.today():
-            raise ValueError("A data de nascimento deve estar no passado.")
-        return value
+        return _validate_birth_date(value)  # type: ignore[return-value]
 
 
 class UsuarioAtualizarParcial(StrictInputModel):
@@ -74,9 +91,7 @@ class UsuarioAtualizarParcial(StrictInputModel):
     @field_validator("data_nascimento")
     @classmethod
     def validar_data_nascimento(cls, value: Optional[date]) -> Optional[date]:
-        if value is not None and value >= date.today():
-            raise ValueError("A data de nascimento deve estar no passado.")
-        return value
+        return _validate_birth_date(value)
 
 
 class UsuarioLogin(StrictInputModel):

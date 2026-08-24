@@ -145,3 +145,7 @@ removed_status=$(curl --silent --output /dev/null --write-out '%{http_code}' --i
 test "$removed_status" = "404"
 
 echo "File Upload external HTTPS generic-MIME persistence/ownership smoke passed."
+
+# Standard User Management reuses File Upload for avatars. Keep the full
+# multi-user profile/avatar/friends/presence HTTPS scenario in this deployment gate.
+BASE_URL="$BASE_URL" SEED_PASSWORD="$PASSWORD" sh "$ROOT/scripts/user-management-smoke.sh"

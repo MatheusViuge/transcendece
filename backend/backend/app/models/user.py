@@ -1,20 +1,22 @@
 from sqlalchemy import (
-    Boolean, CheckConstraint, Column, Integer, String,
-    DateTime, Date
+    Boolean,
+    CheckConstraint,
+    Column,
+    Date,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
-from app.database import Base # onde Base = declarative_base()
+from app.database import Base
 
 
 class Usuario(Base):
-    """
-    Modelo Usuario
-    ---------------
-    Representa a tabela 'usuarios' no banco de dados.
-    Armazena dados de identificação, autenticação e perfil do usuário.
-    """
+    """Modelo principal de autenticação e perfil do usuário."""
+
     __tablename__ = "usuarios"
     __table_args__ = (
         CheckConstraint(
@@ -33,10 +35,26 @@ class Usuario(Base):
     is_active = Column(Boolean, nullable=False, default=True, server_default="true")
     data_cadastro = Column(DateTime, nullable=False, server_default=func.now())
     ultimo_login = Column(DateTime, nullable=True)
-    ultima_atualizacao = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
+    ultima_atualizacao = Column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
+    )
+
+    avatar_file_id = Column(
+        Integer,
+        ForeignKey("uploaded_files.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    last_seen_at = Column(DateTime(timezone=True), nullable=True)
 
     instrutor = relationship("Instrutor", back_populates="usuario", uselist=False)
     matriculas = relationship("Matricula", back_populates="aluno", cascade="all, delete-orphan")
     reviews_curso = relationship("AvaliacaoCurso", back_populates="usuario")
     api_keys = relationship("ApiKey", back_populates="owner", cascade="all, delete-orphan")
-    uploaded_files = relationship("UploadedFile", back_populates="owner", cascade="all, delete-orphan")
+    uploaded_files = relationship(
+        "UploadedFile",
+        back_populates="owner",
+        cascade="all, delete-orphan",
+        foreign_keys="UploadedFile.owner_id",
+    )
+    avatar_file = relationship("UploadedFile", foreign_keys=[avatar_file_id], post_update=True)
