@@ -4,43 +4,45 @@ import { HeaderPrice } from "./HeaderPrice";
 
 interface CourseHeaderProps {
   title: string;
-  description?: string;
+  description: string;
   rating: number;
-  studentCount: number;
-  duration: number;
+  reviewCount: number;
+  durationHours: number;
   difficulty: string;
   price: number;
+  instructor: string;
+  specialty?: string;
 }
 
-export function CourseHeader({ 
-  title, 
-  description = "Aprenda desenvolvimento web do zero com HTML, CSS, JavaScript, React, Node.js e muito mais.",
-  rating, 
-  studentCount, 
-  duration, 
-  difficulty, 
-  price 
+export function CourseHeader({
+  title,
+  description,
+  rating,
+  reviewCount,
+  durationHours,
+  difficulty,
+  price,
+  instructor,
+  specialty,
 }: CourseHeaderProps) {
-
   return (
     <div className={styles.container}>
-      <h1 className={styles.title}>
-        {title}
-      </h1>
+      <h1 className={styles.title}>{title}</h1>
 
-      <p className={styles.description}>
-        {description}
+      <p className={styles.description}>{description}</p>
+
+      <p className="text-sm text-blue-200">
+        Instrutor: {instructor}
+        {specialty ? ` · ${specialty}` : ""}
       </p>
 
-      {/* Tags */}
-      <HeaderTags 
+      <HeaderTags
         rating={rating}
-        studentCount={studentCount}
-        duration={duration}
+        reviewCount={reviewCount}
+        durationHours={durationHours}
         difficulty={difficulty}
       />
 
-      {/* Preço e Botão */}
       <HeaderPrice price={price} />
     </div>
   );

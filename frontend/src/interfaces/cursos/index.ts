@@ -11,6 +11,22 @@ export interface ICursos {
   preco: number;
 }
 
+export interface ICourseDetails {
+  id: number;
+  titulo: string;
+  descricao: string;
+  avaliacao: number;
+  quantidade_avaliacoes: number;
+  quantidade_horas: number;
+  id_nivel: number;
+  nivel: string;
+  preco: number;
+  id_instrutor: number;
+  instrutor: string;
+  id_especialidade: number;
+  especialidade_instrutor: string;
+}
+
 export interface ICourseSearchItem extends ICursos {
   descricao: string;
   id_categoria: number;
