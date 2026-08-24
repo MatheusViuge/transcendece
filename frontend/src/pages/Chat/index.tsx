@@ -13,7 +13,7 @@ type Participant = {
     sobrenome: string;
     tipo_usuario: "aluno" | "instrutor" | "admin";
     avatar_url: string;
-    online: boolean;
+    online: boolean | null;
     active: boolean;
 };
 
@@ -46,6 +46,11 @@ function messageFromError(error: unknown, fallback: string) {
         return response?.data?.detail || response?.data?.message || fallback;
     }
     return fallback;
+}
+
+function presenceLabel(value: boolean | null) {
+    if (value === null) return "Presença privada";
+    return value ? "Online" : "Offline";
 }
 
 export default function Chat() {
@@ -227,8 +232,8 @@ export default function Chat() {
                                                     {conversation.last_message?.content ?? "Conversa iniciada"}
                                                 </span>
                                             </span>
-                                            <span className="text-xs text-text-muted" aria-label={conversation.participant.online ? "Online" : "Offline"}>
-                                                {conversation.participant.online ? "●" : "○"}
+                                            <span className="text-xs text-text-muted" aria-label={presenceLabel(conversation.participant.online)}>
+                                                {conversation.participant.online === null ? "—" : conversation.participant.online ? "●" : "○"}
                                             </span>
                                         </button>
                                     </li>
@@ -248,7 +253,7 @@ export default function Chat() {
                                     <img src={selected.participant.avatar_url} alt="" className="h-11 w-11 rounded-full object-cover" />
                                     <span className="min-w-0">
                                         <strong className="block truncate">{selected.participant.nome} {selected.participant.sobrenome}</strong>
-                                        <span className="text-xs text-text-muted">{selected.participant.online ? "Online" : "Offline"}</span>
+                                        <span className="text-xs text-text-muted">{presenceLabel(selected.participant.online)}</span>
                                     </span>
                                 </Link>
                                 <Button type="button" variant="secondary" onClick={() => void refreshSelected()} disabled={messagesLoading}>Atualizar</Button>
