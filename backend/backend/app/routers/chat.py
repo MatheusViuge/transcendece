@@ -12,6 +12,7 @@ from app.core.security import allowed_roles
 from app.database import get_db
 from app.models.chat import ChatMessage, Conversation
 from app.models.user import Usuario
+from app.realtime import realtime_hub
 from app.schemas.chat import ConversationCreate, MessageCreate
 
 router = APIRouter(prefix="/chat", tags=["User Interaction"])
@@ -86,9 +87,11 @@ def _conversation_payload(db: Session, conversation: Conversation, own_id: int) 
         "updated_at": conversation.updated_at,
         "last_message": None if last_message is None else {
             "id": last_message.id,
+            "conversation_id": last_message.conversation_id,
             "sender_id": last_message.sender_id,
             "content": last_message.content,
             "created_at": last_message.created_at,
+            "event": "chat.message.created",
         },
     }
 
@@ -184,12 +187,38 @@ def list_conversations(
 def list_messages(
     conversation_id: int,
     before_id: int | None = Query(default=None, ge=1),
+    after_id: int | None = Query(default=None, ge=1),
     limit: int = Query(default=30, ge=1, le=100),
     db: Session = Depends(get_db),
     identity=Depends(allowed_roles()),
 ):
     conversation = _participant_conversation(db, conversation_id, identity["id"])
+    if before_id is not None and after_id is not None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Use before_id ou after_id, nunca os dois ao mesmo tempo.",
+        )
+
     query = db.query(ChatMessage).filter(ChatMessage.conversation_id == conversation.id)
+    if after_id is not None:
+        rows = (
+            query.filter(ChatMessage.id > after_id)
+            .order_by(ChatMessage.id.asc())
+            .limit(limit + 1)
+            .all()
+        )
+        has_more = len(rows) > limit
+        selected = rows[:limit]
+        return success_response(
+            data={
+                "items": [_message_payload(item) for item in selected],
+                "has_more": has_more,
+                "next_before_id": None,
+                "next_after_id": selected[-1].id if has_more and selected else None,
+            },
+            message="Mensagens retornadas com sucesso.",
+        )
+
     if before_id is not None:
         query = query.filter(ChatMessage.id < before_id)
 
@@ -197,19 +226,19 @@ def list_messages(
     has_more = len(rows) > limit
     selected = rows[:limit]
     selected.reverse()
-    next_before_id = selected[0].id if has_more and selected else None
     return success_response(
         data={
             "items": [_message_payload(item) for item in selected],
             "has_more": has_more,
-            "next_before_id": next_before_id,
+            "next_before_id": selected[0].id if has_more and selected else None,
+            "next_after_id": None,
         },
         message="Mensagens retornadas com sucesso.",
     )
 
 
 @router.post("/conversations/{conversation_id}/messages", status_code=status.HTTP_201_CREATED)
-def send_message(
+async def send_message(
     conversation_id: int,
     payload: MessageCreate,
     db: Session = Depends(get_db),
@@ -231,8 +260,14 @@ def send_message(
     db.add(message)
     db.commit()
     db.refresh(message)
+
+    event = _message_payload(message)
+    await realtime_hub.publish_to_users(
+        (conversation.user_low_id, conversation.user_high_id),
+        event,
+    )
     return success_response(
-        data=_message_payload(message),
+        data=event,
         message="Mensagem enviada com sucesso.",
         status_code=status.HTTP_201_CREATED,
     )
