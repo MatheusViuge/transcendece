@@ -102,7 +102,7 @@ reset: fclean up
 
 seed: check-env
 	@echo "$(BOLD)$(BLUE)🌱 [$(NAME)] Populando banco com dados de avaliação...$(RESET)"
-	@$(COMPOSE_CMD) exec -T backend python scripts/seed_rbac.py
+	@$(COMPOSE_CMD) exec -T backend python -m scripts.seed_rbac
 	@echo "$(GREEN)✔ [$(NAME)] Seed concluído.$(RESET)"
 
 reset-seed: fclean
