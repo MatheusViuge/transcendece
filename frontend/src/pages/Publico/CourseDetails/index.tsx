@@ -7,29 +7,22 @@ import type { ICourseDetails } from "@/interfaces/cursos";
 import { api, catchCustom } from "@/services/api";
 import { CourseHeader } from "./components/CourseHeader";
 
+type CourseRequestState = {
+  routeId: string;
+  status: "success" | "not-found" | "error";
+  course: ICourseDetails | null;
+};
+
 export default function CourseDetails() {
-  const { id } = useParams<{ id: string }>();
-  const [course, setCourse] = useState<ICourseDetails | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [notFound, setNotFound] = useState(false);
-  const [requestError, setRequestError] = useState(false);
+  const { id = "" } = useParams<{ id: string }>();
+  const [requestState, setRequestState] = useState<CourseRequestState | null>(null);
+  const courseId = Number(id);
+  const invalidCourseId = !Number.isInteger(courseId) || courseId <= 0;
 
   useEffect(() => {
+    if (invalidCourseId) return;
+
     let active = true;
-    const courseId = Number(id);
-
-    setCourse(null);
-    setNotFound(false);
-    setRequestError(false);
-    setLoading(true);
-
-    if (!Number.isInteger(courseId) || courseId <= 0) {
-      setNotFound(true);
-      setLoading(false);
-      return () => {
-        active = false;
-      };
-    }
 
     api.get<ICourseDetails>({
       url: `/courses/${courseId}`,
@@ -37,29 +30,32 @@ export default function CourseDetails() {
     })
       .then((response) => {
         if (!active) return;
-        setCourse(response.data);
+        setRequestState({
+          routeId: id,
+          status: "success",
+          course: response.data,
+        });
       })
       .catch((error) => {
         if (!active) return;
 
         if (isAxiosError(error) && error.response?.status === 404) {
-          setNotFound(true);
+          setRequestState({ routeId: id, status: "not-found", course: null });
           return;
         }
 
-        setRequestError(true);
+        setRequestState({ routeId: id, status: "error", course: null });
         catchCustom(error);
-      })
-      .finally(() => {
-        if (active) setLoading(false);
       });
 
     return () => {
       active = false;
     };
-  }, [id]);
+  }, [courseId, id, invalidCourseId]);
 
-  if (loading) {
+  const stateForCurrentRoute = requestState?.routeId === id ? requestState : null;
+
+  if (!invalidCourseId && stateForCurrentRoute === null) {
     return (
       <main className="grid min-h-[60vh] place-items-center px-4" aria-busy="true">
         <Spinner size="lg" label="Carregando curso" />
@@ -67,7 +63,7 @@ export default function CourseDetails() {
     );
   }
 
-  if (notFound) {
+  if (invalidCourseId || stateForCurrentRoute?.status === "not-found") {
     return (
       <main className="grid min-h-[60vh] place-items-center px-4 py-12">
         <EmptyState
@@ -83,7 +79,7 @@ export default function CourseDetails() {
     );
   }
 
-  if (requestError || !course) {
+  if (stateForCurrentRoute?.status === "error" || !stateForCurrentRoute?.course) {
     return (
       <main className="mx-auto w-full max-w-3xl px-4 py-12">
         <Alert tone="danger" title="Não foi possível carregar o curso">
@@ -92,6 +88,8 @@ export default function CourseDetails() {
       </main>
     );
   }
+
+  const course = stateForCurrentRoute.course;
 
   return (
     <main className="w-full pb-12">
