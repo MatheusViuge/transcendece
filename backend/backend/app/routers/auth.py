@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.response import success_response
@@ -10,6 +11,7 @@ from app.database import get_db
 from app.models.user import Usuario
 from app.schemas.user import TokenResponse, UsuarioCriar, UsuarioLogin, UsuarioResponse
 from app.services.auth_service import get_password_hash, verify_password
+from app.services.friend_code import generate_friend_code
 
 router = APIRouter(
     prefix="/auth",
@@ -29,19 +31,38 @@ def registra_usuario(usuario: UsuarioCriar, db: Session = Depends(get_db)):
             detail="Usuário já cadastrado.",
         )
 
-    db_usuario = Usuario(
-        nome=usuario.nome,
-        sobrenome=usuario.sobrenome,
-        email=email,
-        senha_hash=get_password_hash(usuario.senha_hash),
-        tipo_usuario="aluno",
-        is_active=True,
-        data_nascimento=usuario.data_nascimento,
-    )
+    password_hash = get_password_hash(usuario.senha_hash)
+    db_usuario: Usuario | None = None
+    for _ in range(8):
+        candidate = Usuario(
+            nome=usuario.nome,
+            sobrenome=usuario.sobrenome,
+            email=email,
+            senha_hash=password_hash,
+            tipo_usuario="aluno",
+            is_active=True,
+            data_nascimento=usuario.data_nascimento,
+            friend_code=generate_friend_code(),
+        )
+        db.add(candidate)
+        try:
+            db.commit()
+            db.refresh(candidate)
+            db_usuario = candidate
+            break
+        except IntegrityError:
+            db.rollback()
+            if db.query(Usuario).filter(Usuario.email == email).first() is not None:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Usuário já cadastrado.",
+                )
 
-    db.add(db_usuario)
-    db.commit()
-    db.refresh(db_usuario)
+    if db_usuario is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Não foi possível gerar um identificador público único. Tente novamente.",
+        )
 
     return success_response(
         data=UsuarioResponse.model_validate(db_usuario),
