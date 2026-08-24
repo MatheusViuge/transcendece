@@ -13,5 +13,5 @@ from .certificate import Certificado
 from .level import Nivel
 from .api_key import ApiKey
 from .uploaded_file import UploadedFile
-from .friendship import Friendship
+from .friendship import Friendship, FriendRequest
 from .chat import Conversation, ChatMessage
