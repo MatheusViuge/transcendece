@@ -100,6 +100,16 @@ fclean: check-env
 
 reset: fclean up
 
+seed: check-env
+	@echo "$(BOLD)$(BLUE)🌱 [$(NAME)] Populando banco com dados de avaliação...$(RESET)"
+	@$(COMPOSE_CMD) exec -T backend python scripts/seed_rbac.py
+	@echo "$(GREEN)✔ [$(NAME)] Seed concluído.$(RESET)"
+
+reset-seed: fclean
+	@$(MAKE) up
+	@$(MAKE) seed
+	@echo "$(BOLD)$(GREEN)✅ [$(NAME)] Reset + seed concluído.$(RESET)"
+
 shell-backend: check-env
 	@$(COMPOSE_CMD) exec backend sh
 
@@ -124,10 +134,12 @@ help:
 	@echo "$(RED)  make clean$(RESET)         → remove containers + volumes do projeto"
 	@echo "$(RED)  make fclean$(RESET)        → remove também imagens locais do projeto"
 	@echo "$(BOLD)$(RED)  make reset$(RESET)         → limpa tudo do projeto e sobe novamente"
+	@echo "$(BLUE)  make seed$(RESET)          → popula cursos, usuários e admin no banco"
+	@echo "$(BOLD)$(GREEN)  make reset-seed$(RESET)    → limpa, sobe e aplica o seed"
 	@echo "$(CYAN)  make shell-backend$(RESET) → abre shell no backend"
 	@echo "$(CYAN)  make shell-db$(RESET)      → abre shell no PostgreSQL"
 	@echo "$(CYAN)  make help$(RESET)          → mostra esta ajuda\n"
 
 .PHONY: all check-env init up down start stop restart re build ps status logs \
-	logs-backend logs-frontend logs-proxy logs-db config clean fclean reset \
-	shell-backend shell-db help
+	logs-backend logs-frontend logs-proxy logs-db config clean fclean reset seed \
+	reset-seed shell-backend shell-db help
