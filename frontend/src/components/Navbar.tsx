@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { tv } from "tailwind-variants";
 import { BrandLogo } from "@/brand";
 import { Button } from "./Button";
@@ -14,8 +14,14 @@ const styles = tv({
 const { navbar } = styles();
 
 export default function Navbar() {
-    const { user, isAuthenticated } = useUser();
+    const navigate = useNavigate();
+    const { user, isAuthenticated, logout } = useUser();
     const roleLinks = user ? ROLE_NAV_LINKS[user.tipo_usuario] : [];
+
+    const handleLogout = () => {
+        logout();
+        navigate("/login", { replace: true });
+    };
 
     return (
         <nav className={navbar()} aria-label="Navegação principal">
@@ -25,12 +31,25 @@ export default function Navbar() {
             </Link>
 
             {isAuthenticated ? (
-                <div className="flex max-w-[72vw] items-center gap-3 overflow-x-auto whitespace-nowrap py-2 text-sm xs:gap-4">
-                    {roleLinks.map((link) => (
-                        <Link key={link.to} to={link.to} className="link-black shrink-0 text-sm xs:text-base">
-                            {link.label}
-                        </Link>
-                    ))}
+                <div className="flex min-w-0 flex-1 items-center justify-end gap-1 xs:gap-2 md:gap-3">
+                    <div className="flex min-w-0 items-center gap-3 overflow-x-auto whitespace-nowrap py-2 text-sm xs:gap-4">
+                        {roleLinks.map((link) => (
+                            <Link key={link.to} to={link.to} className="link-black shrink-0 text-sm xs:text-base">
+                                {link.label}
+                            </Link>
+                        ))}
+                    </div>
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleLogout}
+                        className="shrink-0 px-2 text-text-muted opacity-60 hover:border-danger hover:bg-surface-muted hover:text-danger hover:opacity-100 focus-visible:border-danger focus-visible:text-danger focus-visible:opacity-100 xs:px-3"
+                        aria-label="Sair da conta"
+                        title="Sair da conta"
+                    >
+                        Sair
+                    </Button>
                 </div>
             ) : (
                 <div className="flex min-w-0 items-center justify-end gap-1 xs:gap-2 md:gap-4">
