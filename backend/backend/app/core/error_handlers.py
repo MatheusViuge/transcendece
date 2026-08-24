@@ -19,13 +19,18 @@ async def app_exception_handler(request: Request, exc: AppException):
 
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     del request
+    # Pydantic custom validators may keep the original exception object inside
+    # `ctx`. Sanitize the raw error list before putting it inside ErrorResponse,
+    # otherwise Pydantic's own model serializer sees ValueError first and fails
+    # while trying to return the intended 422 response.
+    errors = jsonable_encoder(
+        exc.errors(),
+        custom_encoder={BaseException: str},
+    )
     payload = ErrorResponse(
-        data=exc.errors(),
+        data=errors,
         message="Erro de validação na requisição.",
     )
-    # Custom Pydantic validators may include exception objects in the error
-    # context. FastAPI's encoder converts those values into JSON-safe data
-    # instead of letting JSONResponse fail while trying to report a 422.
     return JSONResponse(status_code=422, content=jsonable_encoder(payload))
 
 
