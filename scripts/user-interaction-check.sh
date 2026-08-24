@@ -20,6 +20,8 @@ require_file backend/backend/app/schemas/chat.py
 require_file backend/backend/alembic/versions_v2/0006_user_interaction.py
 require_file backend/backend/tests/test_user_interaction.py
 require_file frontend/src/pages/Chat/index.tsx
+require_file frontend/src/Context/UserContext.tsx
+require_file frontend/src/components/Navbar.tsx
 require_file scripts/user-interaction-smoke.sh
 
 require_pattern 'UniqueConstraint\("user_low_id", "user_high_id"' backend/backend/app/models/chat.py
@@ -36,5 +38,11 @@ require_pattern 'maxLength=\{2000\}' frontend/src/pages/Chat/index.tsx
 require_pattern 'Carregar anteriores' frontend/src/pages/Chat/index.tsx
 require_pattern '/chat\?user=' frontend/src/pages/Profile/index.tsx
 require_pattern 'path="/chat"' frontend/src/routes/AppRoutes.tsx
+require_pattern 'clearAuthStorage' frontend/src/Context/UserContext.tsx
+require_pattern 'localStorage.removeItem\(AUTH_STORAGE_KEY\)' frontend/src/Context/UserContext.tsx
+require_pattern 'sessionStorage.removeItem\(AUTH_STORAGE_KEY\)' frontend/src/Context/UserContext.tsx
+require_pattern 'onClick=\{handleLogout\}' frontend/src/components/Navbar.tsx
+require_pattern 'hover:text-danger' frontend/src/components/Navbar.tsx
+require_pattern 'navigate\("/login", \{ replace: true \}\)' frontend/src/components/Navbar.tsx
 
 printf '%s\n' 'User Interaction structural/security check passed.'
