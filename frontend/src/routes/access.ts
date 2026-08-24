@@ -24,18 +24,21 @@ export const ROLE_NAV_LINKS: Record<UserRole, Array<{ label: string; to: string 
     aluno: [
         { label: "Explorar", to: "/aluno/explorar" },
         { label: "Meus cursos", to: "/aluno/cursos" },
+        { label: "Chat", to: "/chat" },
         { label: "Arquivos", to: "/aluno/arquivos" },
         { label: "Perfil", to: "/perfil" },
     ],
     instrutor: [
         { label: "Meus Cursos", to: "/instrutor/cursos" },
         { label: "Correções", to: "/instrutor/correcoes" },
+        { label: "Chat", to: "/chat" },
         { label: "Arquivos", to: "/instrutor/arquivos" },
         { label: "Perfil", to: "/perfil" },
     ],
     admin: [
         { label: "Usuários", to: "/admin/usuarios" },
         { label: "Cursos", to: "/admin/cursos" },
+        { label: "Chat", to: "/chat" },
         { label: "Arquivos", to: "/admin/arquivos" },
         { label: "Perfil", to: "/perfil" },
     ],
@@ -62,7 +65,7 @@ export function getRequiredRole(pathname: string): UserRole | null {
 }
 
 export function isAuthenticatedOnlyPath(pathname: string): boolean {
-    return pathname === "/perfil" || pathname.startsWith("/usuarios/");
+    return pathname === "/perfil" || pathname === "/chat" || pathname.startsWith("/usuarios/");
 }
 
 export function getRoleLandingPath(role: UserRole): string {

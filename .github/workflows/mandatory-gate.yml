@@ -67,11 +67,13 @@ jobs:
         run: sh ../../scripts/rbac-check.sh
       - name: File Upload structural and security check
         run: sh ../../scripts/file-upload-check.sh
+      - name: User Interaction structural and security check
+        run: sh ../../scripts/user-interaction-check.sh
 
   deployment:
     name: Compose HTTPS and clean-install smoke
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -206,6 +208,7 @@ jobs:
           curl --silent --show-error --fail --insecure https://localhost/design-system >/dev/null
           curl --silent --show-error --fail --insecure https://localhost/admin/usuarios >/dev/null
           curl --silent --show-error --fail --insecure https://localhost/aluno/arquivos >/dev/null
+          curl --silent --show-error --fail --insecure https://localhost/chat >/dev/null
       - name: Verify PWA assets through HTTPS
         shell: bash
         run: |
@@ -252,6 +255,8 @@ jobs:
         run: sh scripts/rbac-smoke.sh
       - name: Verify File Upload through HTTPS and restart
         run: sh scripts/file-upload-smoke.sh
+      - name: Verify User Interaction through HTTPS and restart
+        run: sh scripts/user-interaction-smoke.sh
       - name: Verify Framework and ORM module integration
         run: sh scripts/framework-orm-smoke.sh
       - name: Verify internal ports are not public
@@ -298,4 +303,4 @@ jobs:
       - name: Print Git author summary for human review
         run: git shortlog -sne --all
       - name: Confirm automated mandatory checks
-        run: echo 'Frontend, backend, deployment, Framework/ORM, Design System, PWA, Advanced Search, Public API, RBAC, File Upload and secret-file checks passed.'
+        run: echo 'Frontend, backend, deployment, Framework/ORM, Design System, PWA, Advanced Search, Public API, RBAC, File Upload, User Interaction and secret-file checks passed.'
