@@ -1,5 +1,5 @@
 NAME = transcendence
-COMPOSE = docker compose
+COMPOSE = docker-compose
 COMPOSE_FILE = docker-compose.yml
 ENV_FILE = .env
 COMPOSE_CMD = $(COMPOSE) -f $(COMPOSE_FILE)
