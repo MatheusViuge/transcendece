@@ -11,6 +11,7 @@ from app.core.response import success_response
 from app.core.security import allowed_roles
 from app.database import get_db
 from app.models.chat import ChatMessage, Conversation
+from app.models.friendship import Friendship
 from app.models.user import Usuario
 from app.schemas.chat import ConversationCreate, MessageCreate
 
@@ -34,20 +35,30 @@ def _avatar_url(user: Usuario) -> str:
     return DEFAULT_AVATAR_URL if user.avatar_file_id is None else f"/api/users/{user.id}/avatar"
 
 
-def _user_payload(user: Usuario) -> dict[str, object]:
+def _pair(first_id: int, second_id: int) -> tuple[int, int]:
+    return (first_id, second_id) if first_id < second_id else (second_id, first_id)
+
+
+def _are_friends(db: Session, first_id: int, second_id: int) -> bool:
+    low_id, high_id = _pair(first_id, second_id)
+    return (
+        db.query(Friendship)
+        .filter(Friendship.user_low_id == low_id, Friendship.user_high_id == high_id)
+        .first()
+        is not None
+    )
+
+
+def _user_payload(db: Session, viewer_id: int, user: Usuario) -> dict[str, object]:
     return {
         "id": user.id,
         "nome": user.nome,
         "sobrenome": user.sobrenome,
         "tipo_usuario": user.tipo_usuario,
         "avatar_url": _avatar_url(user),
-        "online": _is_online(user),
+        "online": _is_online(user) if _are_friends(db, viewer_id, user.id) else None,
         "active": bool(user.is_active),
     }
-
-
-def _pair(first_id: int, second_id: int) -> tuple[int, int]:
-    return (first_id, second_id) if first_id < second_id else (second_id, first_id)
 
 
 def _other_user_id(conversation: Conversation, own_id: int) -> int:
@@ -81,7 +92,7 @@ def _conversation_payload(db: Session, conversation: Conversation, own_id: int) 
     )
     return {
         "id": conversation.id,
-        "participant": _user_payload(other),
+        "participant": _user_payload(db, own_id, other),
         "created_at": conversation.created_at,
         "updated_at": conversation.updated_at,
         "last_message": None if last_message is None else {
