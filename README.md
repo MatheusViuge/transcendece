@@ -1,8 +1,10 @@
-*This project has been created as part of the 42 curriculum by mviana-v.*
+*This project has been created as part of the 42 curriculum by mviana-v, guclemen, lalves-d, gda-conc, jesda-si.*
 
 # Transcendece — EduTech Learning Platform
 
-> **README status:** delivery skeleton aligned with the ft_transcendence v21.2 subject. Sections marked with `TODO` must be completed with final, verifiable project information before evaluation.
+Transcendece is a full-stack Learning Management System built for the 42 ft_transcendence project. It combines a React frontend, a FastAPI backend, PostgreSQL persistence, HTTPS through Nginx, role-based access control, social features, realtime communication and analytics in a containerized deployment.
+
+The final delivery implements a **19-point module portfolio**: the required 14 module points plus the maximum 5 bonus points.
 
 ## Table of Contents
 
@@ -16,187 +18,177 @@
 - [Features List](#features-list)
 - [Modules](#modules)
 - [Individual Contributions](#individual-contributions)
-- [Resources](#resources)
-- [Known Limitations and Final Evaluation Checklist](#known-limitations-and-final-evaluation-checklist)
+- [Resources and AI](#resources-and-ai)
+- [Evaluation Notes](#evaluation-notes)
 
 ---
 
 ## Description
 
-### Project name
+The platform supports three main application roles: **student**, **instructor** and **administrator**. Users can authenticate securely, browse courses, manage their profile and avatar, interact with friends, use persistent direct chat, receive realtime WebSocket updates and, when authorized, access administrative user management and analytics features.
 
-**Transcendece — EduTech Learning Platform**
+The application also includes a public API, advanced search, a reusable design system, secure file management, Progressive Web App support, privacy/legal pages and a reproducible Docker-based deployment.
 
-### Goal
+### Main implemented capabilities
 
-Transcendece is a web-based Learning Management System (LMS) developed as part of the 42 curriculum. The platform is designed around three main types of users — students, instructors, and administrators — and aims to provide a complete environment for publishing courses, consuming educational content, tracking learning progress, managing users, and enabling social and real-time interactions.
-
-The final delivery is planned around the mandatory ft_transcendence requirements plus a **19-point module portfolio**.
-
-### Key features
-
-The final product is planned to include:
-
-- secure account registration and authentication;
-- role-based user experiences for students, instructors, and administrators;
-- course discovery, enrollment, lessons, progress tracking, evaluations, and certificates;
-- responsive and accessible web interfaces;
-- public Privacy Policy and Terms of Service pages;
-- advanced course search with filters, sorting, and pagination;
-- user profiles, avatars, friends, and presence information;
-- direct user interaction and chat;
-- real-time updates through WebSockets;
-- secure file upload and management;
-- a documented public API protected by API keys and rate limiting;
-- advanced role and permission management;
-- an installable Progressive Web App with offline behavior;
-- an advanced analytics dashboard with filters and CSV/PDF exports;
-- a reusable custom design system;
-- containerized deployment through a single command.
-
-> The list above describes the target delivery. The [Features List](#features-list) must be kept synchronized with what is actually merged and demonstrable.
+- secure registration and JWT authentication;
+- salted and hashed passwords;
+- frontend and backend input validation;
+- public Privacy Policy and Terms of Service;
+- HTTPS public entry point through Nginx;
+- PostgreSQL persistence managed through SQLAlchemy and Alembic;
+- student, instructor and administrator role separation;
+- course listing, course details and advanced course search;
+- profile editing and public profile pages;
+- custom/default avatars;
+- friends add/remove/list and presence information;
+- persistent direct messaging;
+- authenticated WebSocket realtime delivery;
+- reconnect and message-gap recovery;
+- secure file upload, preview/download and deletion;
+- administrative user and role management;
+- API-key protected public API with rate limiting and documentation;
+- installable PWA with offline behavior;
+- reusable custom design system;
+- advanced analytics with interactive charts, filters, realtime refresh and CSV/PDF export;
+- automated backend, structural, security and complete-deployment smoke tests.
 
 ---
 
 ## Instructions
 
-### Prerequisites
-
-Final evaluation is expected to require:
+### Requirements
 
 - Git;
-- Docker Engine or an equivalent container runtime;
-- Docker Compose v2 or an equivalent orchestration command;
-- Google Chrome, latest stable version;
-- a local `.env` file created from `.env.example`.
+- Docker Engine;
+- Docker Compose (`docker-compose` v1 is supported by the project Makefile);
+- GNU Make;
+- Google Chrome, latest stable version.
 
-For local development outside containers, the repository currently uses:
+### Environment setup
 
-- Node.js / npm for the frontend;
-- Python 3.10+ for the backend;
-- PostgreSQL as the target relational database.
+Create the local environment file:
 
-### Environment configuration
+```bash
+make init
+```
 
-The final repository must provide a root `.env.example` with every required configuration key and no real secrets.
+This copies `.env.example` to `.env` without overwriting an existing file. Before using a non-disposable environment, replace the example database password and JWT secret.
 
-Expected configuration includes values equivalent to:
+Current required variables are:
 
 ```env
-POSTGRES_DB=transcendence
-POSTGRES_USER=transcendence
-POSTGRES_PASSWORD=change_me
-DATABASE_URL=postgresql+psycopg2://transcendence:change_me@db:5432/transcendence
-JWT_SECRET_KEY=change_me_with_a_long_random_value
+POSTGRES_DB=edutech_db
+POSTGRES_USER=edutech_user
+POSTGRES_PASSWORD=change-me-local-db-password
+JWT_SECRET_KEY=change-me-with-a-long-random-secret
 ```
 
-Additional environment variables must be documented here when new modules require them.
+The real `.env` file is local configuration and must not be committed.
 
-### Final evaluation startup flow
-
-The target deployment flow is:
+### Start the project
 
 ```bash
-git clone <repository-url>
-cd transcendece
-cp .env.example .env
-# Replace example secrets in .env
-docker compose up --build
+make up
 ```
 
-The final application is expected to be exposed through HTTPS by the reverse proxy.
+The Makefile validates the Compose configuration, builds the images and starts the complete stack.
 
-> **TODO before evaluation:** confirm the exact host/port, certificate setup, shutdown command, persistence behavior, and clean-install procedure against the final deployment branch.
+Application entry point:
 
-### Frontend development
+```text
+https://localhost
+```
+
+The local TLS certificate is generated for the evaluation environment, so the browser may require accepting the local certificate warning.
+
+### Evaluation seed
+
+Populate deterministic evaluation data:
 
 ```bash
-cd frontend
-npm ci
-npm run dev
+make seed
 ```
 
-Useful checks:
+For a completely clean database and seeded deployment:
 
 ```bash
-npm run lint
-npm run build
+make reset-seed
 ```
 
-### Backend development
+Useful seeded accounts include:
+
+```text
+Standard user
+alice.ferreira@seed.example.com
+SearchSeed42!
+
+Administrator
+admin.rbac@seed.example.com
+SearchSeed42!
+```
+
+### Useful commands
 
 ```bash
-cd backend
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
+make ps
+make logs
+make logs-backend
+make logs-frontend
+make logs-proxy
+make logs-db
+make down
+make reset
+make fclean
 ```
 
-The backend is built with FastAPI and is expected to use Alembic as the authoritative database migration mechanism.
-
-> **TODO before evaluation:** document the exact local backend startup and Alembic commands used by the final branch.
+`make help` prints the complete command list.
 
 ---
 
 ## Team Information
 
-Every team member listed in the first line of this README must appear in this section with their real 42 login, role, and responsibilities.
+The roles below describe **final-delivery ownership and evaluation responsibility**. Exact code authorship remains available in the Git history and is not reassigned by this README.
 
-| 42 Login | Project Role(s) | Responsibilities |
+| 42 Login | Project Role(s) | Final delivery responsibility |
 |---|---|---|
-| `mviana-v` | TODO: confirm final role(s) | TODO: replace with the final, verifiable responsibility summary based on merged work |
-| TODO | TODO | TODO |
-| TODO | TODO | TODO |
+| `mviana-v` | Product Owner, Project Manager / Scrum Master, Developer | Release coordination, integration, module completion, CI/evaluation readiness and deployment troubleshooting |
+| `guclemen` | Technical Lead / Architect, Developer | Architecture ownership for the final delivery, cross-layer integration review and technical presentation |
+| `lalves-d` | Developer | Backend, API and database validation ownership for the final evaluation |
+| `gda-conc` | Developer | Infrastructure, Docker/Nginx/HTTPS deployment validation and smoke-test ownership |
+| `jesda-si` | Developer | Frontend, routing/session UX, responsiveness and final browser validation |
 
-### Required final review
-
-Before evaluation:
-
-- add every actual team member to the first line of the README;
-- remove unused placeholder rows;
-- make roles match the way the team actually worked;
-- ensure responsibilities can be explained and supported by commits, issues, and pull requests.
+Because the group contains five members, responsibilities are split across the required management, architecture and development functions while every member remains responsible for understanding the complete application.
 
 ---
 
 ## Project Management
 
-### Work organization
+The project was organized through GitHub Issues, Epic issues, branches, pull requests and automated evaluation gates.
 
-The project is organized around GitHub Issues and Pull Requests. Work is broken into mandatory-compliance tasks, module Epics, implementation issues, testing tasks, and evaluation-readiness gates.
-
-Planned workflow:
+Typical flow:
 
 ```text
-Issue
-  ↓
-Branch
-  ↓
+Requirement / module
+        ↓
+      Issue
+        ↓
+ Feature branch
+        ↓
 Implementation + tests
-  ↓
-Pull Request
-  ↓
-Review
-  ↓
-Integration testing
-  ↓
-Merge
+        ↓
+ Pull Request
+        ↓
+CI / deployment smoke
+        ↓
+Review + integration
+        ↓
+      main
 ```
 
-### Project management tools
+The repository uses separate evaluation evidence and automated gates for important modules. Stacked pull requests were used for dependent modules such as User Interaction, WebSockets and Analytics so each module could remain reviewable without mixing unrelated diffs.
 
-- GitHub Issues — backlog and task tracking;
-- GitHub Pull Requests — review and integration;
-- Git branches — isolated implementation;
-- TODO: document any additional board/project-management tool actually used by the team.
-
-### Meetings and task distribution
-
-TODO: describe the real meeting cadence, planning process, ownership decisions, and how blockers were handled.
-
-### Communication channels
-
-TODO: document the actual communication channels used by the team (for example Discord, Slack, WhatsApp, in-person meetings, or another channel).
+Final validation is performed against the integrated `main` branch using the same Docker deployment path used during evaluation.
 
 ---
 
@@ -206,388 +198,241 @@ TODO: document the actual communication channels used by the team (for example D
 
 | Technology | Purpose |
 |---|---|
-| React 19 | Component-based frontend framework |
-| TypeScript | Static typing and safer frontend contracts |
-| Vite | Frontend development and production build tooling |
-| Tailwind CSS | Utility-first styling and responsive layouts |
+| React 19 | Main frontend framework |
+| TypeScript | Static typing and frontend contracts |
+| Vite | Development and production build tooling |
+| Tailwind CSS | Responsive styling and design tokens |
 | React Router | Client-side routing |
-| Axios | HTTP client for backend communication |
-| React Hook Form | Form state and submission management |
-| Zod | Frontend schema validation |
-| React Icons | Consistent icon library |
+| Axios | HTTP communication |
+| React Hook Form | Form management |
+| Zod | Frontend validation |
+| React Icons | Shared icon set |
 
 ### Backend
 
 | Technology | Purpose |
 |---|---|
-| FastAPI | Backend web framework and HTTP API |
-| Python | Backend application language |
-| SQLAlchemy | ORM and relational data access |
-| Alembic | Database schema migrations |
-| Pydantic | Request/response validation and data contracts |
+| FastAPI | HTTP and WebSocket backend framework |
+| Python 3.10 | Backend language/runtime |
+| SQLAlchemy | ORM and relational persistence |
+| Alembic | Versioned database migrations |
+| Pydantic | Request/response validation |
+| JWT | Authentication/session tokens |
 | Passlib | Password hashing support |
-| JWT libraries | Session/authentication tokens |
 | Uvicorn | ASGI application server |
-| Pytest | Automated backend tests |
+| Pytest | Backend automated testing |
 
-### Database
+### Infrastructure
 
-**PostgreSQL** is the target relational database.
-
-It was selected because the platform has strongly related entities such as users, instructors, courses, lessons, enrollments, progress, evaluations, friendships, messages, and permissions. PostgreSQL provides transactional consistency, relational constraints, indexing, concurrency support, and mature integration with SQLAlchemy and Alembic.
-
-### Deployment and infrastructure
-
-Planned final infrastructure:
-
-- Docker containers;
-- Docker Compose orchestration;
-- Nginx or equivalent reverse proxy;
-- HTTPS/TLS at the public entry point;
-- PostgreSQL named-volume persistence;
-- environment-based secret configuration.
-
-### Major technical choices
-
-#### React + FastAPI
-
-The combination separates the user interface from backend domain logic while keeping a clear API contract between the two sides. It also directly supports the selected **Framework** Major module.
-
-#### SQLAlchemy + Alembic
-
-SQLAlchemy provides ORM-based persistence while Alembic provides explicit, reproducible schema evolution. Together they support the selected **ORM** Minor module and make clean deployments easier to validate.
-
-#### PostgreSQL
-
-PostgreSQL is appropriate for a multi-user educational platform because correctness and relational integrity matter for enrollments, permissions, progress, messages, and analytics.
-
-#### Docker Compose
-
-Container orchestration makes the project reproducible for peers and evaluators and supports the mandatory requirement that the project can be started with a single command.
+| Technology | Purpose |
+|---|---|
+| PostgreSQL 16 | Relational database |
+| Docker / Docker Compose | Reproducible service orchestration |
+| Nginx | HTTPS reverse proxy and frontend runtime |
+| GitHub Actions | CI, security checks and deployment smoke tests |
 
 ---
 
 ## Architecture
 
-Target deployment architecture:
-
 ```text
-Browser
-   │
-   │ HTTPS
-   ▼
-Reverse Proxy
-   ├── / --------------------> Frontend
-   │                            React / static production build
-   │
-   └── /api/ ----------------> Backend
-                                FastAPI
-                                  │
-                                  ▼
-                              PostgreSQL
+                         HTTPS / WSS
+Browser  ─────────────────────────────────────┐
+                                              ▼
+                                      ┌───────────────┐
+                                      │     Nginx     │
+                                      │ reverse proxy │
+                                      └───────┬───────┘
+                                   /          │          /api/
+                                  ▼           │             ▼
+                         ┌──────────────┐      │      ┌──────────────┐
+                         │   React SPA  │      │      │   FastAPI    │
+                         │ static build │      │      │ REST + WS    │
+                         └──────────────┘      │      └──────┬───────┘
+                                              │             │
+                                              │             ▼
+                                              │      ┌──────────────┐
+                                              └─────▶│  PostgreSQL  │
+                                                     └──────────────┘
 ```
 
-Real-time features will extend the same public HTTPS entry point with WebSocket upgrade support.
-
-> **TODO before evaluation:** update this diagram if the final architecture differs from the target shown above.
+The browser communicates externally only through the HTTPS/WSS entry point. REST endpoints remain the persistence/source-of-truth path, while WebSockets are used for immediate realtime delivery.
 
 ---
 
 ## Database Schema
 
-The current product domain already contains relational concepts for users, instructors, courses, lessons, enrollments, learning progress, evaluations, assessments, categories, levels, modules, specialties, and certificates.
+The application uses PostgreSQL with SQLAlchemy models and Alembic migrations. The schema is relational and uses foreign keys, unique constraints and validation constraints to protect application invariants.
 
-The final schema is expected to evolve with the selected social, upload, permissions, real-time, and analytics modules.
-
-### Core domain overview
+### Main relationships
 
 ```mermaid
 erDiagram
-    USER ||--o| INSTRUCTOR : "may become"
-    USER ||--o{ ENROLLMENT : "enrolls"
-    INSTRUCTOR ||--o{ COURSE : "creates"
-    CATEGORY ||--o{ COURSE : "classifies"
-    LEVEL ||--o{ COURSE : "defines level"
-    COURSE ||--o{ COURSE_MODULE : "contains"
-    COURSE_MODULE ||--o{ LESSON : "contains"
-    ENROLLMENT ||--o{ PROGRESS : "tracks"
-    COURSE ||--o{ EVALUATION : "receives"
-    USER ||--o{ EVALUATION : "writes"
-    COURSE ||--o{ CERTIFICATE : "awards"
-    USER ||--o{ CERTIFICATE : "earns"
+    USER ||--o| INSTRUCTOR : has
+    USER ||--o{ ENROLLMENT : creates
+    INSTRUCTOR ||--o{ COURSE : owns
+    COURSE ||--o{ ENROLLMENT : receives
+    COURSE ||--o{ COURSE_MODULE : contains
+    COURSE_MODULE ||--o{ LESSON : contains
+    USER ||--o{ FRIENDSHIP : participates
+    USER ||--o{ UPLOADED_FILE : owns
+    USER ||--o{ CONVERSATION : participates
+    CONVERSATION ||--o{ MESSAGE : contains
+    USER ||--o{ MESSAGE : sends
 ```
 
-### Expected core tables
+### Important schema guarantees
 
-| Entity | Purpose | Important fields to document in final README |
-|---|---|---|
-| User | Account and authentication data | id, name, email, password hash, role, timestamps |
-| Instructor | Instructor-specific profile data | user reference, biography/specialty-related data |
-| Course | Course metadata and ownership | id, title, description, instructor, category, level, status |
-| Course Module | Groups lessons inside a course | id, course reference, title, ordering |
-| Lesson | Educational unit | id, module reference, title, content/type, ordering |
-| Enrollment | Student-course relationship | student, course, status, timestamps |
-| Progress | Lesson/course learning progress | enrollment/student references, completion/progress data |
-| Evaluation | Course review/rating | user, course, rating, comment |
-| Assessment | Assessment-related data | TODO: document final fields and relationships |
-| Certificate | Course completion certificate | user, course, issue metadata |
-| Category | Course classification | id, name |
-| Level | Course difficulty level | id, name |
-| Specialty | Instructor specialization | TODO: document final relationship |
-
-### Planned module-related schema additions
-
-The selected modules may require additional entities such as:
-
-- friendship / friend request;
-- chat conversation and message;
-- file/upload metadata;
-- API key and API usage/rate-limit data;
-- role/permission records when not represented only by static roles;
-- analytics/event aggregates.
-
-> **TODO before evaluation:** replace this planning-oriented schema section with the final migration-backed schema, including real table names, key types, foreign keys, unique constraints, and module-specific tables.
+- user email uniqueness;
+- password hashes are stored instead of plaintext passwords;
+- role and active-state constraints are enforced server-side;
+- friendships use canonical user pairs so the same friendship cannot be duplicated in reverse order;
+- direct conversations use canonical participant pairs for the same reason;
+- messages belong to a persisted conversation and sender;
+- uploaded files retain owner metadata and are protected by access checks;
+- enrollment/course relationships are protected against duplicate pairs;
+- migrations are automatically applied before the backend starts.
 
 ---
 
 ## Features List
 
-The subject requires a complete list of implemented features, the team member(s) responsible for each feature, and a short explanation.
-
-The table below starts as a delivery roadmap. **Change each status only when the feature is merged, tested, and demonstrable.**
+All items below are integrated in the final `main` branch. Exact commit-level authorship can be inspected in Git; the full team owns the final integrated behavior and evaluation.
 
 | Feature | Status | Description | Contributor(s) |
 |---|---|---|---|
-| Account registration | TODO verify | Secure user registration with validated input | TODO |
-| Login / JWT authentication | TODO verify | Authenticated sessions and protected routes | TODO |
-| Role-based application areas | TODO verify | Student, instructor, and administrator experiences | TODO |
-| Course catalog | TODO verify | Browse and inspect available courses | TODO |
-| Enrollment | TODO verify | Students enroll in courses | TODO |
-| Lessons and modules | TODO verify | Course content hierarchy | TODO |
-| Learning progress | TODO verify | Track student completion/progress | TODO |
-| Evaluations/reviews | TODO verify | Users review courses | TODO |
-| Certificates | TODO verify | Course completion certificate flow | TODO |
-| Privacy Policy | Planned/mandatory | Public project-specific privacy information | TODO |
-| Terms of Service | Planned/mandatory | Public project-specific usage terms | TODO |
-| Advanced Search | Planned module | Search, filters, sorting, pagination, URL state | TODO |
-| Public API | Planned module | API-key secured CRUD-style API with rate limiting and docs | TODO |
-| Advanced Permissions | Planned module | User CRUD, role management, protected actions/views | TODO |
-| File Upload & Management | Planned module | Validated upload, preview/progress, secure access and delete | TODO |
-| User Profiles | Implemented in PR #125 | Editable profiles, avatars/default avatars | TODO final attribution |
-| Friends and presence | Implemented in PR #125 | Friends add/remove/list plus timeout-based online/offline status | TODO final attribution |
-| Chat | Implemented in PR #126 (pending review) | Persistent direct messaging, private history pagination and profile/friend integration | TODO final attribution |
-| Real-time updates | Planned module | WebSocket-based live updates and broadcasting | TODO |
-| PWA | Planned module | Installability and offline behavior | TODO |
-| Design System | Planned module | Reusable documented visual/component system | TODO |
-| Analytics Dashboard | Planned module | Charts, filters, real-time data, CSV/PDF exports | TODO |
+| Registration and authentication | Implemented | Validated signup/login, JWT sessions and protected routes | Team |
+| Privacy Policy / Terms | Implemented | Public project-specific legal pages | Team |
+| Course catalog/details | Implemented | Real database-backed course browsing and detail pages | Team |
+| Advanced Search | Implemented | Server-side query, filters, sorting and pagination with URL-synced UI | Team |
+| Framework architecture | Implemented | React frontend + FastAPI backend | Team |
+| ORM and migrations | Implemented | SQLAlchemy persistence + Alembic migration chain | Team |
+| Design System | Implemented | Shared palette, typography, icons and reusable components | Team |
+| Progressive Web App | Implemented | Manifest, service worker, installability and offline UX | Team |
+| Public API | Implemented | Versioned API, API keys, rate limiting, docs and CRUD-style endpoints | Team |
+| Advanced Permissions | Implemented | User CRUD, role management and permission-aware views/actions | Team |
+| File Upload & Management | Implemented | Multi-type validation, ownership, persistence, preview/progress and delete | Team |
+| Standard User Management | Implemented | Editable profile, avatar, friends, presence and public profiles | Team |
+| User Interaction | Implemented | Persistent private direct chat integrated with profiles/friends | Team |
+| WebSocket Realtime | Implemented | Authenticated WSS, scoped broadcasting, reconnect and gap recovery | Team |
+| Analytics Dashboard | Implemented | KPIs, charts, date/filter controls, realtime updates and CSV/PDF exports | Team |
+| Evaluation/CI gates | Implemented | Structural, security, backend and full HTTPS/WSS deployment checks | Team |
 
 ---
 
 ## Modules
 
-### Point system
+The module portfolio totals **19 points**.
 
-According to the ft_transcendence module system:
+| Module | Type | Points | Implementation summary | Status |
+|---|---:|---:|---|---|
+| Frontend + Backend Framework | Major | 2 | React + FastAPI as the application architecture | Implemented |
+| ORM | Minor | 1 | SQLAlchemy + Alembic | Implemented |
+| Custom Design System | Minor | 1 | Semantic visual foundations and 10+ reusable components | Implemented |
+| Progressive Web App | Minor | 1 | Installable manifest, service worker and offline behavior | Implemented |
+| Advanced Search | Minor | 1 | Search, filters, sorting and pagination | Implemented |
+| Public API | Major | 2 | API-key security, rate limiting, docs and multiple HTTP methods/endpoints | Implemented |
+| Advanced Permissions | Major | 2 | User CRUD, role administration and RBAC-enforced actions/views | Implemented |
+| File Upload & Management | Minor | 1 | Secure multi-type upload lifecycle and ownership controls | Implemented |
+| Standard User Management | Major | 2 | Profile, avatar, friends, presence and public profiles | Implemented |
+| User Interaction | Major | 2 | Basic chat integrated with profiles and friend flows | Implemented |
+| Real-time WebSockets | Major | 2 | Authenticated realtime connection and scoped live broadcasting | Implemented |
+| Advanced Analytics Dashboard | Major | 2 | Interactive analytics, realtime data, filters and exports | Implemented |
+| **TOTAL** |  | **19** | Required 14 points + maximum 5 bonus points | **Implemented** |
 
-- **Major module = 2 points**;
-- **Minor module = 1 point**.
+### Module evidence
 
-The project requires at least **14 validated module points**. The current roadmap targets **19 points**, which corresponds to the required module target plus up to 5 additional bonus points, subject to evaluation and full module validation.
+Evaluation-oriented documentation, structural checks, security checks and deployment smoke scripts are stored under `docs/evaluation/`, `scripts/` and `.github/workflows/`.
 
-### Planned module portfolio — target: 19 points
+Important completed integration PRs include:
 
-| Module | Type | Points | Planned implementation | Contributor(s) | Status |
-|---|---:|---:|---|---|---|
-| Frontend + Backend Framework | Major | 2 | React frontend and FastAPI backend as the primary application frameworks | TODO | Planned / foundation exists |
-| ORM | Minor | 1 | SQLAlchemy models with Alembic-managed migrations | TODO | Planned / foundation exists |
-| Custom Design System | Minor | 1 | Defined palette, typography, icons and at least 10 reusable documented components | TODO | Planned |
-| Progressive Web App | Minor | 1 | Manifest, service worker, installability, offline fallback and cache strategy | TODO | Planned |
-| Advanced Search | Minor | 1 | Search with filters, sorting, pagination and synchronized frontend query state | TODO | Planned |
-| Public API | Major | 2 | Secured API keys, rate limiting, documentation and at least five GET/POST/PUT/DELETE endpoints | TODO | Planned |
-| Advanced Permissions | Major | 2 | User CRUD, role management and role-based backend/frontend actions | TODO | Planned |
-| File Upload & Management | Minor | 1 | Multi-type uploads with type/size validation, secure storage, preview, progress and deletion | TODO | Planned |
-| Standard User Management | Major | 2 | Profile editing, avatars/default avatar, friends, online status and public profile pages | TODO final attribution | Implemented in PR #125; Gate #268 green |
-| User Interaction | Major | 2 | Basic chat, profile interactions and friend add/remove/list flows | TODO final attribution | Implemented in PR #126; pending final gate/review |
-| Real-time WebSockets | Major | 2 | Connection lifecycle, authenticated clients, live broadcasts and graceful disconnects | TODO | Planned |
-| Advanced Analytics Dashboard | Major | 2 | Interactive charts, real-time data, date/filter customization and CSV/PDF exports | TODO | Planned |
-| **TOTAL** |  | **19** |  |  |  |
-
-### Module justification
-
-#### Frontend + Backend Framework — Major — 2 pts
-
-React and FastAPI already match the architecture of the application and provide clear separation between presentation and domain/API responsibilities. This module formalizes those frameworks as the primary architecture on both sides.
-
-#### ORM — Minor — 1 pt
-
-The application has a relational domain with many relationships. SQLAlchemy reduces raw SQL duplication and gives the domain explicit models, while Alembic makes schema changes reproducible.
-
-#### Custom Design System — Minor — 1 pt
-
-A learning platform has many repeated UI patterns: buttons, inputs, cards, badges, modals, navigation, loaders, feedback states and content containers. A custom design system improves consistency, accessibility and development speed.
-
-#### Progressive Web App — Minor — 1 pt
-
-Installability and offline behavior add practical value to an educational platform, especially for users who revisit course content frequently or use mobile devices.
-
-#### Advanced Search — Minor — 1 pt
-
-Course discovery is central to an LMS. Filters, sorting and pagination make the catalog useful as the number of courses grows.
-
-#### Public API — Major — 2 pts
-
-A documented API makes the platform externally consumable and demonstrates security, API design, rate limiting and CRUD operations beyond the internal frontend contract.
-
-#### Advanced Permissions — Major — 2 pts
-
-The product naturally contains different authority levels. Explicit role management and protected views/actions are necessary for safe administration and instructor workflows.
-
-#### File Upload & Management — Minor — 1 pt
-
-Avatars and educational content benefit from a reusable upload pipeline with server-side validation, lifecycle management and secure access.
-
-#### Standard User Management — Major — 2 pts
-
-Profiles, avatars, friends and presence transform authentication into a complete user system and provide the foundation for the platform's social features.
-
-#### User Interaction — Major — 2 pts
-
-The implementation uses canonical two-user conversations and persistent messages with participant-only authorization and cursor-paginated history. The React chat integrates avatar/presence, profile navigation and friend flows, while keeping durable REST persistence as the foundation for the WebSocket transport added by the next Epic.
-
-#### Real-time WebSockets — Major — 2 pts
-
-Real-time transport supports chat, presence and live dashboard/state updates while demonstrating concurrent multi-user behavior.
-
-#### Advanced Analytics Dashboard — Major — 2 pts
-
-Analytics add value for instructors and administrators by turning learning and platform activity into actionable information with filtering and export capabilities.
-
-### Module completion rule
-
-A module must only be marked as implemented when:
-
-- all requirements described by the subject are satisfied;
-- the feature is integrated with the real application;
-- errors and edge cases are handled;
-- relevant automated/manual tests pass;
-- its implementation and contributors are documented here;
-- the team can demonstrate and explain it during evaluation.
+- Standard User Management — PR #125;
+- User Interaction — PR #126;
+- WebSockets — PR #128;
+- Advanced Analytics Dashboard — PR #129;
+- final course-data/deployment compatibility hotfix — PR #130.
 
 ---
 
 ## Individual Contributions
 
-The final README must provide an honest, detailed contribution breakdown for every team member.
+The project history contains collaborative development and integration work across multiple branches. This section records verifiable work where available and the final area each member owns for evaluation. It intentionally does not rewrite Git authorship.
 
 ### `mviana-v`
 
-**Role(s):** TODO
+**Roles:** Product Owner, Project Manager / Scrum Master, Developer.
 
-**Verified contributions:** TODO — fill from the final Git history and merged PRs.
+Primary final responsibilities include integration of the module roadmap, release/evaluation readiness, CI gates, Docker/Compose compatibility, Makefile tooling, seed/evaluation workflow, cross-module debugging and final pull-request integration.
 
-**Features/modules/components:**
+A recurring challenge was making the same complete deployment behave consistently in GitHub Actions and the 42 environment. The final tooling supports the local Compose v1 environment while CI-specific scripts remain compatible with Compose v2 where required.
 
-- TODO
+### `guclemen`
 
-**Challenges and solutions:**
+**Roles:** Technical Lead / Architect, Developer.
 
-- TODO
+Final ownership covers architectural understanding and validation of the React/FastAPI/PostgreSQL boundaries, module integration, API contracts and the technical explanation of the system during evaluation.
 
-### `<team-member-login>`
+The main evaluation responsibility is demonstrating why persistence remains authoritative through REST/PostgreSQL while realtime delivery, role controls and client state remain separate concerns.
 
-**Role(s):** TODO
+### `lalves-d`
 
-**Verified contributions:**
+**Role:** Developer.
 
-- TODO
+Final ownership covers backend/API/database validation: authentication flows, relational constraints, migrations, public API behavior, RBAC checks and regression-test interpretation.
 
-**Features/modules/components:**
+The main evaluation responsibility is validating that access control and data integrity are enforced by the backend/database rather than only by frontend visibility rules.
 
-- TODO
+### `gda-conc`
 
-**Challenges and solutions:**
+**Role:** Developer.
 
-- TODO
+Final ownership covers infrastructure and deployment validation: Docker/Compose lifecycle, Nginx HTTPS/WSS routing, persistence volumes, service health and complete-stack smoke testing.
 
-> Duplicate the section above for every real team member. Do not assign work that cannot be supported by the repository history or the team's actual collaboration.
+The main evaluation responsibility is reproducing a clean deployment and explaining how frontend, backend, proxy and PostgreSQL services interact.
 
----
+### `jesda-si`
 
-## Resources
+**Role:** Developer.
 
-### Technical references
+Final ownership covers frontend/session UX, routing and browser validation. Repository history includes the fix to preserve the authenticated route correctly while user state reloads, preventing the page reload flow from being incorrectly blocked by the loading state.
 
-Primary documentation used or expected to be used during development:
-
-- React documentation — https://react.dev/
-- TypeScript documentation — https://www.typescriptlang.org/docs/
-- Vite documentation — https://vite.dev/guide/
-- Tailwind CSS documentation — https://tailwindcss.com/docs
-- FastAPI documentation — https://fastapi.tiangolo.com/
-- SQLAlchemy documentation — https://docs.sqlalchemy.org/
-- Alembic documentation — https://alembic.sqlalchemy.org/
-- PostgreSQL documentation — https://www.postgresql.org/docs/
-- Pydantic documentation — https://docs.pydantic.dev/
-- Docker documentation — https://docs.docker.com/
-- Nginx documentation — https://nginx.org/en/docs/
-- MDN Web Docs — https://developer.mozilla.org/
-
-> **TODO before evaluation:** add any significant articles, tutorials, specifications, or references that were actually used by the team.
-
-### AI usage
-
-AI-assisted tools have been used as development support. Their use must remain transparent and the team remains responsible for understanding and reviewing all submitted work.
-
-Current categories of AI assistance include:
-
-- analysis of project requirements and backlog decomposition;
-- drafting and refining GitHub Issues and acceptance criteria;
-- code review and identification of security/deployment gaps;
-- generation/refinement of implementation proposals;
-- test-case and CI/checklist design;
-- documentation and README drafting.
-
-Before final evaluation, this section must be updated to accurately describe:
-
-- which AI tools were used;
-- which concrete tasks they assisted with;
-- which parts of the code/documentation were AI-assisted;
-- how the team reviewed, tested and validated those outputs.
-
-AI assistance does not replace the requirement that every team member understands the project and can explain their own contributions.
+The main evaluation responsibility is checking responsive behavior, protected navigation, logout/login identity changes and end-user interaction flows in Chrome.
 
 ---
 
-## Known Limitations and Final Evaluation Checklist
+## Resources and AI
 
-This README is intentionally introduced as a **subject-aligned skeleton**. It must evolve together with implementation.
+Main technical references used during development include the official documentation for React, FastAPI, SQLAlchemy, Alembic, PostgreSQL, Docker, Nginx, WebSockets, TypeScript and the 42 ft_transcendence subject.
 
-Before the final evaluation, verify at least:
-
-- [ ] first line lists every real team member using their correct 42 login;
-- [ ] Team Information contains real roles and responsibilities;
-- [ ] Project Management describes the workflow and communication actually used;
-- [ ] Instructions reproduce the final project from a clean clone;
-- [ ] `.env.example` is complete and contains no secrets;
-- [ ] the whole application starts with one command;
-- [ ] HTTPS is the external entry point;
-- [ ] Privacy Policy and Terms of Service are complete and accessible;
-- [ ] the database schema matches the active Alembic migrations;
-- [ ] Features List contains only real, implemented behavior and identifies contributors;
-- [ ] each selected module satisfies every requirement from the subject;
-- [ ] module implementation details and owners are complete;
-- [ ] the final point calculation matches demonstrable modules;
-- [ ] Individual Contributions match Git/PR evidence;
-- [ ] AI usage is accurate and transparent;
-- [ ] latest stable Chrome is tested;
-- [ ] browser console contains no relevant JavaScript warnings/errors;
-- [ ] multi-user behavior is demonstrated with simultaneous users;
-- [ ] frontend is usable on mobile, tablet and desktop;
-- [ ] all relevant tests pass;
-- [ ] the team can explain the architecture, modules and individual contributions.
+AI tools were used as development support for debugging, implementation suggestions, test design and documentation drafting. Suggestions were reviewed, adapted and validated through local testing, code review and CI before integration; final technical decisions and project responsibility remained with the team.
 
 ---
 
-## License / Credits
+## Evaluation Notes
 
-TODO: add a license or project-specific credits if the team decides they are appropriate.
+Recommended clean evaluation flow:
+
+```bash
+git clone https://github.com/MatheusViuge/transcendece.git
+cd transcendece
+make init
+# adjust .env values if desired
+make reset-seed
+make ps
+```
+
+Then open:
+
+```text
+https://localhost
+```
+
+For module-specific evidence, use the documentation and scripts under:
+
+```text
+docs/evaluation/
+scripts/
+.github/workflows/
+```
+
+The final integrated branch is `main` and the project is intended to be evaluated from a clean Docker deployment using the provided Makefile workflow.
